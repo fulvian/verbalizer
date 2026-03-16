@@ -31,7 +31,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 /**
  * Handle incoming message from content script.
  */
-async function handleMessage(message: { type: string; payload: unknown }): Promise<{ success: boolean; data?: unknown; error?: string }> {
+export async function handleMessage(message: { type: string; payload: unknown }): Promise<{ success: boolean; data?: unknown; error?: string }> {
   console.log('[Verbalizer] Received message:', message.type);
   
   switch (message.type) {
@@ -86,7 +86,7 @@ async function handleCallStarted(payload: { platform: 'google-meet' | 'ms-teams'
   
   if (response.success) {
     console.log('[Verbalizer] Recording started:', response.data);
-    return { success: true, data: response.data };
+    return { success: true, data: response.data as { recordingPath?: string } };
   } else {
     console.error('[Verbalizer] Failed to start recording:', response.error);
     return { success: false, error: response.error };

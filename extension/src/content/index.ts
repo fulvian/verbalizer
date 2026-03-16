@@ -4,8 +4,8 @@
  * Monitors DOM for call state changes and communicates with background script.
  */
 
-import { detectGoogleMeet, isGoogleMeetActive } from './detectors/meet';
-import { detectMSTeams, isMSTeamsActive } from './detectors/teams';
+import { detectGoogleMeet } from './detectors/meet';
+import { detectMSTeams } from './detectors/teams';
 import { CallStateObserver } from './observer';
 
 // Platform detection

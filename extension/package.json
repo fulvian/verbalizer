@@ -6,8 +6,9 @@
   "scripts": {
     "build": "webpack --mode production",
     "dev": "webpack --mode development --watch",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "jest --config jest.config.js",
+    "test:watch": "jest --config jest.config.js --watch",
+    "test:coverage": "jest --config jest.config.js --coverage",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit"
   },
