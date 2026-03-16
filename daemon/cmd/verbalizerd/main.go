@@ -1,9 +1,3 @@
-// Package main provides the Verbalizer daemon.
-// This daemon runs as a background service and handles:
-// - Audio capture from system audio (macOS) or PipeWire (Linux)
-// - Transcription using whisper.cpp
-// - Storage of recordings and transcripts
-// - IPC server for communication with the native host
 package main
 
 import (
@@ -12,11 +6,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-)
 
-const (
-	// DefaultSocketPath is the default Unix socket path for IPC.
-	DefaultSocketPath = "/tmp/verbalizer.sock"
+	"github.com/fulvian/verbalizer/daemon/internal/config"
+	"github.com/fulvian/verbalizer/daemon/internal/ipc"
+	"github.com/fulvian/verbalizer/daemon/internal/session"
 )
 
 func main() {
@@ -27,6 +20,30 @@ func main() {
 }
 
 func run() error {
+	// Load configuration
+	cfg, err := config.Load("")
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if err := cfg.EnsureDirs(); err != nil {
+		return fmt.Errorf("failed to ensure directories: %w", err)
+	}
+
+	// Initialize components
+	sessionMgr, err := session.NewManager()
+	if err != nil {
+		return fmt.Errorf("failed to initialize session manager: %w", err)
+	}
+	handler := NewDaemonHandler(sessionMgr)
+	server := ipc.NewServer(ipc.DefaultSocketPath, handler)
+
+	// Start IPC server
+	if err := server.Start(); err != nil {
+		return fmt.Errorf("failed to start IPC server: %w", err)
+	}
+	defer server.Stop()
+
 	// Create context with cancellation for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -37,18 +54,13 @@ func run() error {
 
 	go func() {
 		<-sigChan
-		fmt.Println("Shutting down...")
+		fmt.Println("\nShutting down...")
 		cancel()
 	}()
 
 	fmt.Println("Verbalizer daemon starting...")
-	fmt.Printf("Socket path: %s\n", DefaultSocketPath)
-
-	// TODO: Initialize components
-	// - IPC server
-	// - Audio capture
-	// - Transcriber
-	// - Storage
+	fmt.Printf("Socket path: %s\n", ipc.DefaultSocketPath)
+	fmt.Printf("Recordings dir: %s\n", cfg.RecordingsDir)
 
 	// Wait for shutdown
 	<-ctx.Done()

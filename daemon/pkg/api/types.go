@@ -50,8 +50,9 @@ type StatusData struct {
 	IsRecording    bool     `json:"isRecording"`
 	CurrentCallID  string   `json:"currentCallId,omitempty"`
 	Platform       Platform `json:"platform,omitempty"`
-	RecordingsDir  string   `json:"recordingsDir"`
-	TranscriptsDir string   `json:"transcriptsDir"`
+	AudioPath      string   `json:"audioPath,omitempty"`
+	RecordingsDir  string   `json:"recordingsDir,omitempty"`
+	TranscriptsDir string   `json:"transcriptsDir,omitempty"`
 }
 
 // RecordingStartedData contains data returned when recording starts.
