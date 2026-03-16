@@ -105,33 +105,57 @@
 |------|------------|--------|------------|--------|
 | 1 | Foundation | dev_team-devops_engineer | Nessuna | ✅ COMPLETED |
 | 2 | Chrome Extension | dev_team-frontend_dev | Fase 1 | ✅ COMPLETED |
-| 3 | Native Host | dev_team-backend_dev | Fase 1 | PENDING |
-| 4 | Daemon Core | dev_team-backend_dev | Fase 3 | PENDING |
-| 5 | Audio Capture | dev_team-backend_dev | Fase 4 | PENDING |
-| 6 | STT Integration | dev_team-backend_dev | Fase 5 | PENDING |
-| 7 | Output Generation | dev_team-backend_dev | Fase 6 | PENDING |
-| 8 | Storage & DB | dev_team-backend_dev | Fase 7 | PENDING |
-| 9 | Service Install | dev_team-devops_engineer | Fase 8 | PENDING |
-| 10 | Testing | dev_team-qa_engineer | Fase 9 | PENDING |
+| 3 | Native Host | dev_team-backend_dev | Fase 1 | ✅ COMPLETED |
+| 4 | Daemon Core | dev_team-backend_dev | Fase 3 | 🟡 IN PROGRESS |
 
 ---
 
-## FASE 2: Chrome Extension (2026-03-16)
+## FASE 3: Native Host (2026-03-16)
 
-### Subtask 2.1: Background Script Implementation
-- Task: Implement `BackgroundService` to handle extension messages
-- Agent: dev_team-frontend_dev
+### Subtask 3.1: IPC Client Implementation
+- Task: Implement Unix domain socket client in `native-host/internal/ipc/client.go`
+- Agent: dev_team-backend_dev
 - Status: COMPLETED
-- Output: `extension/src/background/index.ts` (Class-based implementation)
+- Output: `native-host/internal/ipc/client.go` (with timeout and error handling)
 
-### Subtask 2.2: Testing & Coverage
-- Task: Ensure >80% branch coverage and passing tests
-- Agent: dev_team-frontend_dev
+### Subtask 3.2: Message Alignment & Protocol
+- Task: Align NM protocol message types with extension and implement message handling
+- Agent: dev_team-backend_dev
 - Status: COMPLETED
-- Output: 87.67% branch coverage, 100% statement coverage, 84 tests passing
+- Output: `native-host/cmd/main.go` and `native-host/internal/messaging/protocol.go`
 
-### Subtask 2.3: Build Verification
-- Task: Verify webpack build
-- Agent: dev_team-frontend_dev
+### Subtask 3.3: Native Host Testing
+- Task: Unit tests for NM protocol and IPC logic
+- Agent: dev_team-backend_dev
 - Status: COMPLETED
-- Output: `npm run build` succeeds
+- Output: `native-host/internal/ipc/client_test.go`, `native-host/internal/messaging/protocol_test.go` (Passing)
+
+---
+
+## FASE 4: Daemon Core (2026-03-16)
+
+### Subtask 4.1: IPC Server
+- Task: Implement Unix domain socket listener in `daemon/internal/ipc/server.go`
+- Agent: dev_team-backend_dev
+- Status: DELEGATED
+
+### Subtask 4.2: Session Management
+- Task: Implement session tracking and lifecycle management
+- Agent: dev_team-backend_dev
+- Status: DELEGATED
+
+### Subtask 4.3: Command Dispatcher
+- Task: Dispatch IPC commands to session manager and capture engine
+- Agent: dev_team-backend_dev
+- Status: DELEGATED
+
+
+### Subtask 3.2: Message Alignment & Protocol
+- Task: Align NM protocol message types with extension and implement message handling
+- Agent: dev_team-backend_dev
+- Status: DELEGATED
+
+### Subtask 3.3: Native Host Testing
+- Task: Unit tests for NM protocol and IPC logic
+- Agent: dev_team-backend_dev
+- Status: DELEGATED

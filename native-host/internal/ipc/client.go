@@ -3,6 +3,7 @@ package ipc
 
 import (
 	"encoding/json"
+	"fmt"
 	"net"
 	"time"
 )
@@ -32,7 +33,7 @@ func NewClient(socketPath string) *Client {
 func (c *Client) Send(cmdType string, payload interface{}) (*Response, error) {
 	conn, err := net.DialTimeout("unix", c.socketPath, Timeout)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to connect to daemon: %w", err)
 	}
 	defer conn.Close()
 
@@ -40,7 +41,15 @@ func (c *Client) Send(cmdType string, payload interface{}) (*Response, error) {
 	conn.SetDeadline(time.Now().Add(Timeout))
 
 	// Encode command
-	payloadBytes, _ := json.Marshal(payload)
+	var payloadBytes json.RawMessage
+	if payload != nil {
+		bytes, err := json.Marshal(payload)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal payload: %w", err)
+		}
+		payloadBytes = bytes
+	}
+
 	cmd := &Command{
 		Type:    cmdType,
 		Payload: payloadBytes,
@@ -49,14 +58,14 @@ func (c *Client) Send(cmdType string, payload interface{}) (*Response, error) {
 	// Send command
 	encoder := json.NewEncoder(conn)
 	if err := encoder.Encode(cmd); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to encode command: %w", err)
 	}
 
 	// Read response
 	var resp Response
 	decoder := json.NewDecoder(conn)
 	if err := decoder.Decode(&resp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	return &resp, nil
@@ -65,12 +74,12 @@ func (c *Client) Send(cmdType string, payload interface{}) (*Response, error) {
 // Command represents a command sent to the daemon.
 type Command struct {
 	Type    string          `json:"type"`
-	Payload json.RawMessage `json:"payload"`
+	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
 // Response represents a response from the daemon.
 type Response struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Success bool            `json:"success"`
+	Data    json.RawMessage `json:"data,omitempty"`
+	Error   string          `json:"error,omitempty"`
 }
