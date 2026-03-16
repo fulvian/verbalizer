@@ -1,0 +1,121 @@
+# Orchestration Log — Verbalizer
+
+## Planning
+- Task tier: Medium-High (Multi-component system)
+- Agents selected: 
+  - `research_team-technical_researcher` (Audio capture analysis - COMPLETED)
+  - `dev_team-system_architect` (Architecture design - COMPLETED)
+  - `dev_team-backend_dev` (Native host + Daemon - IN PROGRESS)
+  - `dev_team-frontend_dev` (Chrome Extension - IN PROGRESS)
+  - `dev_team-devops_engineer` (Build system + Service installation - IN PROGRESS)
+  - `dev_team-technical_writer` (Documentation - PENDING)
+  - `dev_team-qa_engineer` (Testing - PENDING)
+- Batches planned: 10 phases
+- Pre_work_snapshot: CONFIRMED by user at 2026-03-16
+
+---
+
+## Research Phase
+
+### Delegation: Research Team - Technical Researcher
+- Task: Audio capture options analysis for Meet/Teams
+- Status: COMPLETED
+- Output: Comprehensive analysis of 8 options
+
+### Key Findings from Research
+1. Chrome tabCapture requires user gesture (not fully automatic)
+2. macOS ScreenCaptureKit captures system-wide audio (accepted by user)
+3. Linux PipeWire allows per-app audio capture
+4. No perfect cross-platform solution exists
+
+### Decision
+**Opzione B selezionata**: Native Host + System Audio
+- macOS: ScreenCaptureKit (system-wide audio)
+- Linux: PipeWire (per-app audio)
+- Trade-off accepted: macOS captures all system audio
+
+---
+
+## FASE 1: Foundation (2026-03-16)
+
+### Subtask 1.1: Git Repository + GitHub
+- Task: Initialize git repo, create GitHub repository
+- Agent: dev_team-devops_engineer
+- Status: COMPLETED
+- Output:
+  - GitHub repo: https://github.com/fulvian/verbalizer
+  - Git initialized with main branch
+  - whisper.cpp added as submodule
+
+### Subtask 1.2: Directory Structure
+- Task: Create project directory structure
+- Agent: dev_team-devops_engineer
+- Status: COMPLETED
+- Output:
+  - extension/src/{content,background,types}/
+  - native-host/cmd/, native-host/internal/{messaging,ipc}/
+  - daemon/cmd/verbalizerd/, daemon/internal/{audio,transcriber,storage,formatter,ipc,config}/
+  - daemon/pkg/api/
+  - scripts/, test/{extension,native-host,daemon}/
+  - whisper/models/
+
+### Subtask 1.3: Installation Scripts
+- Task: Create build and installation scripts
+- Agent: dev_team-devops_engineer
+- Status: COMPLETED
+- Output:
+  - scripts/build.sh - Build automation
+  - scripts/install.sh - Linux installer (systemd)
+  - scripts/install-macos.sh - macOS installer (launchd)
+  - scripts/download-model.sh - Whisper model downloader
+
+### Subtask 1.4: Go Modules
+- Task: Initialize Go modules for native-host and daemon
+- Agent: dev_team-backend_dev
+- Status: COMPLETED
+- Output:
+  - native-host/go.mod
+  - daemon/go.mod with sqlite3 and yaml dependencies
+
+### Subtask 1.5: Extension Configuration
+- Task: Create extension package.json, tsconfig, webpack config
+- Agent: dev_team-frontend_dev
+- Status: COMPLETED
+- Output:
+  - extension/package.json (TypeScript, webpack, jest)
+  - extension/tsconfig.json (strict mode)
+  - extension/webpack.config.js
+  - extension/jest.config.js
+  - extension/manifest.json (Manifest V3)
+
+### Subtask 1.6: Placeholder Code
+- Task: Create placeholder source files for all components
+- Agent: dev_team-backend_dev + dev_team-frontend_dev
+- Status: COMPLETED
+- Output:
+  - Chrome Extension: content scripts, background service, types
+  - Native Host: main.go, messaging protocol, IPC client
+  - Daemon: main.go, config, IPC server, audio/transcriber/storage/formatter packages
+
+---
+
+## Implementation Phases (Remaining)
+
+| Fase | Componente | Agente | Dipendenze | Status |
+|------|------------|--------|------------|--------|
+| 1 | Foundation | dev_team-devops_engineer | Nessuna | ✅ COMPLETED |
+| 2 | Chrome Extension | dev_team-frontend_dev | Fase 1 | PENDING |
+| 3 | Native Host | dev_team-backend_dev | Fase 1 | PENDING |
+| 4 | Daemon Core | dev_team-backend_dev | Fase 3 | PENDING |
+| 5 | Audio Capture | dev_team-backend_dev | Fase 4 | PENDING |
+| 6 | STT Integration | dev_team-backend_dev | Fase 5 | PENDING |
+| 7 | Output Generation | dev_team-backend_dev | Fase 6 | PENDING |
+| 8 | Storage & DB | dev_team-backend_dev | Fase 7 | PENDING |
+| 9 | Service Install | dev_team-devops_engineer | Fase 8 | PENDING |
+| 10 | Testing | dev_team-qa_engineer | Fase 9 | PENDING |
+
+---
+
+## Next Steps
+1. Commit and push FASE 1 to GitHub
+2. Begin FASE 2: Chrome Extension implementation

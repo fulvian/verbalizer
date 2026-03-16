@@ -1,0 +1,29 @@
+# Build outputs
+/extension/dist/
+/extension/node_modules/
+/native-host/native-host
+/daemon/cmd/verbalizerd/verbalizerd
+
+# Whisper models (keep submodule)
+/whisper/models/*.bin
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Temporary files
+tmp/
+temp/
