@@ -141,12 +141,12 @@ verbalizer/
 - [ ] Configurazione whisper.cpp come submodule
 
 ### FASE 2: Chrome Extension
-- [ ] Manifest V3 con permessi necessari
-- [ ] Content script per rilevamento URL
-- [ ] Detector per Google Meet (DOM monitoring)
-- [ ] Detector per MS Teams (DOM monitoring)
-- [ ] Native messaging bridge
-- [ ] Build con webpack
+- [x] Manifest V3 con permessi necessari
+- [x] Content script per rilevamento URL
+- [x] Detector per Google Meet (DOM monitoring)
+- [x] Detector per MS Teams (DOM monitoring)
+- [x] Native messaging bridge
+- [x] Build con webpack
 
 ### FASE 3: Native Host
 - [ ] Protocollo Native Messaging (stdin/stdout)

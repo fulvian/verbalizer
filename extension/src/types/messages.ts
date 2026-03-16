@@ -11,9 +11,10 @@
 export interface CallDetectedMessage {
   readonly type: 'CALL_DETECTED';
   readonly payload: {
-    platform: 'google-meet' | 'ms-teams';
-    url: string;
-    title?: string;
+    readonly platform: 'google-meet' | 'ms-teams';
+    readonly url: string;
+    readonly title?: string;
+    readonly callId: string;
   };
 }
 
@@ -21,9 +22,10 @@ export interface CallDetectedMessage {
 export interface CallStartedMessage{
   readonly type: 'CALL_STARTED';
   readonly payload: {
-    platform: 'google-meet' | 'ms-teams';
-    callId: string;
-    participants?: string[];
+    readonly platform: 'google-meet' | 'ms-teams';
+    readonly callId: string;
+    readonly title?: string;
+    readonly participants?: string[];
   };
 }
 

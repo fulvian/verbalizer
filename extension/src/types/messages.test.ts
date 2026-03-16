@@ -1,6 +1,13 @@
-import { ExtensionMessage, NativeHostRequest } from '../src/types/messages';
+/**
+ * Tests for message types.
+ */
 
-describe('ExtensionMessage Type', () => {
+import type {
+  ExtensionMessage,
+  NativeHostRequest,
+} from './messages';
+
+describe('ExtensionMessage Types', () => {
   it('should handle CALL_DETECTED message', () => {
     const message: ExtensionMessage = {
       type: 'CALL_DETECTED',
@@ -8,13 +15,17 @@ describe('ExtensionMessage Type', () => {
         platform: 'google-meet',
         url: 'https://meet.google.com/abc-123',
         title: 'Test Meeting',
+        callId: 'test-call-id',
       },
     };
-
+    
     expect(message.type).toBe('CALL_DETECTED');
-    expect(message.payload.platform).toBe('google-meet');
-    expect(message.payload.url).toBe('https://meet.google.com/abc-123');
-    expect(message.payload.title).toBe('Test Meeting');
+    if (message.type === 'CALL_DETECTED') {
+      expect(message.payload.platform).toBe('google-meet');
+      expect(message.payload.url).toBe('https://meet.google.com/abc-123');
+      expect(message.payload.title).toBe('Test Meeting');
+      expect(message.payload.callId).toBe('test-call-id');
+    }
   });
 
   it('should handle CALL_STARTED message', () => {
@@ -23,14 +34,18 @@ describe('ExtensionMessage Type', () => {
       payload: {
         platform: 'ms-teams',
         callId: 'test-call-id',
+        title: 'Test Meeting',
         participants: ['user1@example.com'],
       },
     };
-
+    
     expect(message.type).toBe('CALL_STARTED');
-    expect(message.payload.platform).toBe('ms-teams');
-    expect(message.payload.callId).toBe('test-call-id');
-    expect(message.payload.participants).toEqual(['user1@example.com']);
+    if (message.type === 'CALL_STARTED') {
+      expect(message.payload.platform).toBe('ms-teams');
+      expect(message.payload.callId).toBe('test-call-id');
+      expect(message.payload.title).toBe('Test Meeting');
+      expect(message.payload.participants).toEqual(['user1@example.com']);
+    }
   });
 
   it('should handle CALL_ENDED message', () => {
@@ -42,11 +57,13 @@ describe('ExtensionMessage Type', () => {
         duration: 300,
       },
     };
-
+    
     expect(message.type).toBe('CALL_ENDED');
-    expect(message.payload.platform).toBe('google-meet');
-    expect(message.payload.callId).toBe('test-call-id');
-    expect(message.payload.duration).toBe(300);
+    if (message.type === 'CALL_ENDED') {
+      expect(message.payload.platform).toBe('google-meet');
+      expect(message.payload.callId).toBe('test-call-id');
+      expect(message.payload.duration).toBe(300);
+    }
   });
 });
 
@@ -60,7 +77,7 @@ describe('NativeHostRequest Type', () => {
         title: 'Test Meeting',
       },
     };
-
+    
     expect(request.type).toBe('START_RECORDING');
     expect(request.payload.platform).toBe('google-meet');
     expect(request.payload.callId).toBe('test-call-id');
@@ -72,7 +89,7 @@ describe('NativeHostRequest Type', () => {
       type: 'STOP_RECORDING',
       payload: { callId: 'test-call-id' },
     };
-
+    
     expect(request.type).toBe('STOP_RECORDING');
     expect(request.payload.callId).toBe('test-call-id');
   });
@@ -82,7 +99,7 @@ describe('NativeHostRequest Type', () => {
       type: 'GET_STATUS',
       payload: {},
     };
-
+    
     expect(request.type).toBe('GET_STATUS');
     expect(request.payload).toEqual({});
   });

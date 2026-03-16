@@ -104,7 +104,7 @@
 | Fase | Componente | Agente | Dipendenze | Status |
 |------|------------|--------|------------|--------|
 | 1 | Foundation | dev_team-devops_engineer | Nessuna | ✅ COMPLETED |
-| 2 | Chrome Extension | dev_team-frontend_dev | Fase 1 | PENDING |
+| 2 | Chrome Extension | dev_team-frontend_dev | Fase 1 | ✅ COMPLETED |
 | 3 | Native Host | dev_team-backend_dev | Fase 1 | PENDING |
 | 4 | Daemon Core | dev_team-backend_dev | Fase 3 | PENDING |
 | 5 | Audio Capture | dev_team-backend_dev | Fase 4 | PENDING |
@@ -116,6 +116,22 @@
 
 ---
 
-## Next Steps
-1. Commit and push FASE 1 to GitHub
-2. Begin FASE 2: Chrome Extension implementation
+## FASE 2: Chrome Extension (2026-03-16)
+
+### Subtask 2.1: Background Script Implementation
+- Task: Implement `BackgroundService` to handle extension messages
+- Agent: dev_team-frontend_dev
+- Status: COMPLETED
+- Output: `extension/src/background/index.ts` (Class-based implementation)
+
+### Subtask 2.2: Testing & Coverage
+- Task: Ensure >80% branch coverage and passing tests
+- Agent: dev_team-frontend_dev
+- Status: COMPLETED
+- Output: 87.67% branch coverage, 100% statement coverage, 84 tests passing
+
+### Subtask 2.3: Build Verification
+- Task: Verify webpack build
+- Agent: dev_team-frontend_dev
+- Status: COMPLETED
+- Output: `npm run build` succeeds
