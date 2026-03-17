@@ -4,11 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/fulvian/verbalizer/daemon/internal/audio"
+	"github.com/fulvian/verbalizer/daemon/internal/formatter"
 	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
 	"github.com/fulvian/verbalizer/daemon/pkg/api"
 )
@@ -28,6 +30,7 @@ type Manager struct {
 	currentSession *Session
 	capture        audio.Capture
 	transcriber    transcriber.Transcriber
+	formatter      formatter.Formatter
 	isTranscribing bool
 }
 
@@ -57,6 +60,7 @@ func NewManager() (*Manager, error) {
 	return &Manager{
 		capture:     capturer,
 		transcriber: transcriber.NewWhisper(binaryPath, modelPath),
+		formatter:   formatter.NewMarkdownFormatter(),
 	}, nil
 }
 
@@ -128,7 +132,50 @@ func (m *Manager) StopRecording(callID string) error {
 			return
 		}
 
-		fmt.Printf("Transcription complete for session %s. Result saved to %s\n", sess.CallID, transcriptPath)
+		// Generate Markdown output
+		duration := time.Since(sess.StartTime)
+		data := formatter.TranscriptData{
+			Metadata: formatter.Metadata{
+				Title:     sess.Title,
+				Date:      sess.StartTime,
+				Platform:  string(sess.Platform),
+				Duration:  duration,
+				AudioFile: filepath.Base(sess.AudioPath),
+			},
+			FullText: transcript.Text,
+		}
+
+		for _, s := range transcript.Segments {
+			data.Segments = append(data.Segments, formatter.TranscriptSegment{
+				Start: time.Duration(s.Start * float64(time.Second)),
+				End:   time.Duration(s.End * float64(time.Second)),
+				Text:  s.Text,
+			})
+		}
+
+		markdown, err := m.formatter.Format(data)
+		if err != nil {
+			fmt.Printf("Failed to format transcript for session %s: %v\n", sess.CallID, err)
+			return
+		}
+
+		// Save Markdown file to transcripts/ directory
+		// Filename format: YYYY-MM-DD_HH-MM-SS_platform.md
+		timestamp := sess.StartTime.Format("2006-01-02_15-04-05")
+		mdFilename := fmt.Sprintf("%s_%s.md", timestamp, sess.Platform)
+		mdPath := filepath.Join("transcripts", mdFilename)
+
+		if err := os.MkdirAll("transcripts", 0755); err != nil {
+			fmt.Printf("Failed to create transcripts directory: %v\n", err)
+			return
+		}
+
+		if err := os.WriteFile(mdPath, []byte(markdown), 0644); err != nil {
+			fmt.Printf("Failed to save Markdown transcript for session %s: %v\n", sess.CallID, err)
+			return
+		}
+
+		fmt.Printf("Transcription complete for session %s. Result saved to %s and %s\n", sess.CallID, transcriptPath, mdPath)
 	}(m.currentSession)
 
 	m.currentSession = nil

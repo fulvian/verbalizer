@@ -2,6 +2,7 @@ package session
 
 import (
 	"github.com/fulvian/verbalizer/daemon/internal/audio"
+	"github.com/fulvian/verbalizer/daemon/internal/formatter"
 	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
 	"github.com/fulvian/verbalizer/daemon/pkg/api"
 	"testing"
@@ -14,6 +15,7 @@ func TestSessionManager(t *testing.T) {
 	sm := &Manager{
 		capture:     mockCapture,
 		transcriber: mockTranscriber,
+		formatter:   formatter.NewMarkdownFormatter(),
 	}
 
 	t.Run("InitialState", func(t *testing.T) {

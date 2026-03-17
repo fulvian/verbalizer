@@ -45,38 +45,46 @@
 | 3 | Native Host | dev_team-backend_dev | Fase 1 | ✅ COMPLETED |
 | 4 | Daemon Core | dev_team-backend_dev | Fase 3 | ✅ COMPLETED |
 | 5 | Audio Capture | dev_team-backend_dev | Fase 4 | ✅ COMPLETED |
-| 6 | STT Integration | dev_team-backend_dev | Fase 5 | 🟡 IN PROGRESS |
+| 6 | STT Integration | dev_team-backend_dev | Fase 5 | ✅ COMPLETED |
+| 7 | Output Generation | dev_team-backend_dev | Fase 6 | ✅ COMPLETED |
+| 8 | Storage & DB | dev_team-backend_dev | Fase 7 | 🟡 IN PROGRESS |
 
 ---
 
-## FASE 5: Audio Capture (2026-03-16)
+## FASE 7: Output Generation (2026-03-16)
 
-### Subtask 5.1: macOS Audio Capture Implementation
-- Task: Implement `capture_darwin.go` using `ffmpeg` + `avfoundation`
+### Subtask 7.1: Markdown Formatter
+- Task: Implement `daemon/internal/formatter/markdown.go` using templates
 - Agent: dev_team-backend_dev
 - Status: COMPLETED
-- Output: `daemon/internal/audio/capture_darwin.go`
+- Output: `daemon/internal/formatter/markdown.go`, `markdown_test.go`
 
-### Subtask 5.2: Linux Audio Capture Implementation
-- Task: Implement `capture_linux.go` using `pw-record`
+### Subtask 7.2: Integration
+- Task: Integrate formatter with SessionManager lifecycle
 - Agent: dev_team-backend_dev
 - Status: COMPLETED
-- Output: `daemon/internal/audio/capture_linux.go`
-
-### Subtask 5.3: Audio Encoding & Integration
-- Task: Implement PCM to MP3 conversion and integrate with SessionManager
-- Agent: dev_team-backend_dev
-- Status: COMPLETED
-- Output: `daemon/internal/audio/encoder.go`, updated `SessionManager`
+- Output: `SessionManager` generates Markdown files in `transcripts/` after transcription.
 
 ---
 
-## FASE 6: STT Integration (2026-03-16)
+## FASE 8: Storage & Database (2026-03-16)
 
-### Subtask 6.1: whisper.cpp Setup
-- Task: Build whisper.cpp and download model
+### Subtask 8.1: SQLite Schema
+- Task: Implement SQLite schema and database operations
 - Agent: dev_team-backend_dev
 - Status: DELEGATED
+
+### Subtask 8.2: Session Persistence
+- Task: Persist session metadata and transcript paths to database
+- Agent: dev_team-backend_dev
+- Status: DELEGATED
+
+
+### Subtask 7.2: Metadata extraction
+- Task: Generate YAML frontmatter from session metadata
+- Agent: dev_team-backend_dev
+- Status: DELEGATED
+
 
 ### Subtask 6.2: Transcriber Wrapper
 - Task: Implement `daemon/internal/transcriber/whisper.go` wrapper
