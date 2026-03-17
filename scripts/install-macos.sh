@@ -53,33 +53,34 @@ mkdir -p "$BIN_DIR"
 mkdir -p "$LAUNCH_AGENTS_DIR"
 mkdir -p "$CHROME_NM_DIR"
 mkdir -p "$CHROMIUM_NM_DIR"
+mkdir -p "$HOME/Library/Application Support/BraveSoftware/Brave-Browser/NativeMessagingHosts"
+mkdir -p "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts"
 mkdir -p "$HOME/verbalizer/recordings"
 mkdir -p "$HOME/verbalizer/transcripts"
+
+# Build binaries
+echo "Building binaries..."
+cd "$PROJECT_ROOT"
+make build
 
 # Copy binaries
 echo "Installing binaries..."
 cp "$PROJECT_ROOT/native-host/native-host" "$INSTALL_DIR/"
-cp "$PROJECT_ROOT/daemon/cmd/verbalizerd/verbalizerd" "$INSTALL_DIR/"
+cp "$PROJECT_ROOT/daemon/verbalizerd" "$INSTALL_DIR/"
 
 # Create symlinks in bin
+echo "Creating symlinks..."
 ln -sf "$INSTALL_DIR/verbalizerd" "$BIN_DIR/verbalizerd"
 
-# Install Chrome Native Messaging host
-echo "Configuring Chrome Native Messaging..."
-cat > "$CHROME_NM_DIR/com.verbalizer.host.json" << EOF
-{
-  "name": "com.verbalizer.host",
-  "description": "Verbalizer Native Host",
-  "path": "$INSTALL_DIR/native-host",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://EXTENSION_ID_PLACEHOLDER/"
-  ]
-}
-EOF
+# Install Native Messaging host config
+echo "Configuring Native Messaging..."
+# Set the correct path in the manifest
+sed "s|NATIVE_HOST_PATH|$INSTALL_DIR/native-host|g" "$PROJECT_ROOT/native-host/com.verbalizer.host.json" > "$CHROME_NM_DIR/com.verbalizer.host.json"
 
-# Also for Chromium
+# Also for Chromium, Brave, and Edge
 cp "$CHROME_NM_DIR/com.verbalizer.host.json" "$CHROMIUM_NM_DIR/"
+cp "$CHROME_NM_DIR/com.verbalizer.host.json" "$HOME/Library/Application Support/BraveSoftware/Brave-Browser/NativeMessagingHosts/"
+cp "$CHROME_NM_DIR/com.verbalizer.host.json" "$HOME/Library/Application Support/Microsoft Edge/NativeMessagingHosts/"
 
 # Install launchd service
 echo "Installing launchd service..."

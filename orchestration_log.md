@@ -48,23 +48,8 @@
 | 6 | STT Integration | dev_team-backend_dev | Fase 5 | ✅ COMPLETED |
 | 7 | Output Generation | dev_team-backend_dev | Fase 6 | ✅ COMPLETED |
 | 8 | Storage & DB | dev_team-backend_dev | Fase 7 | ✅ COMPLETED |
-| 9 | Service Install | dev_team-devops_engineer | Fase 8 | 🟡 IN PROGRESS |
-
----
-
-## FASE 8: Storage & Database (2026-03-16)
-
-### Subtask 8.1: SQLite Schema
-- Task: Implement SQLite schema and database operations
-- Agent: dev_team-backend_dev
-- Status: COMPLETED
-- Output: `daemon/internal/storage/database.go`, `database_test.go`
-
-### Subtask 8.2: Session Persistence
-- Task: Persist session metadata and transcript paths to database
-- Agent: dev_team-backend_dev
-- Status: COMPLETED
-- Output: `SessionManager` saves/updates session records in `verbalizer.db`.
+| 9 | Service Install | dev_team-devops_engineer | Fase 8 | ✅ COMPLETED |
+| 10 | Testing | dev_team-qa_engineer | Fase 9 | 🟡 IN PROGRESS |
 
 ---
 
@@ -73,7 +58,35 @@
 ### Subtask 9.1: Linux Installation (systemd)
 - Task: Finalize systemd unit file and installation script
 - Agent: dev_team-devops_engineer
+- Status: COMPLETED
+- Output: `scripts/install.sh`
+
+### Subtask 9.2: macOS Installation (launchd)
+- Task: Finalize launchd plist and installation script
+- Agent: dev_team-devops_engineer
+- Status: COMPLETED
+- Output: `scripts/install-macos.sh`
+
+### Subtask 9.3: Native Messaging Registration
+- Task: Create JSON manifest for Chrome and register the host
+- Agent: dev_team-devops_engineer
+- Status: COMPLETED
+- Output: `native-host/com.verbalizer.host.json`
+
+---
+
+## FASE 10: Testing & Polish (2026-03-16)
+
+### Subtask 10.1: Final Verification
+- Task: Run all tests and verify builds
+- Agent: dev_team-qa_engineer
 - Status: DELEGATED
+
+### Subtask 10.2: Documentation Review
+- Task: Final review of ARCHITECTURE.md, INSTALLATION.md, and README.md
+- Agent: dev_team-technical_writer
+- Status: DELEGATED
+
 
 ### Subtask 9.2: macOS Installation (launchd)
 - Task: Finalize launchd plist and installation script
