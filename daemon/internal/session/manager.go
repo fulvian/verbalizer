@@ -3,11 +3,13 @@ package session
 import (
 	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/fulvian/verbalizer/daemon/internal/audio"
+	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
 	"github.com/fulvian/verbalizer/daemon/pkg/api"
 )
 
@@ -25,6 +27,8 @@ type Manager struct {
 	mu             sync.RWMutex
 	currentSession *Session
 	capture        audio.Capture
+	transcriber    transcriber.Transcriber
+	isTranscribing bool
 }
 
 // NewManager creates a new session manager.
@@ -45,8 +49,14 @@ func NewManager() (*Manager, error) {
 		return nil, fmt.Errorf("failed to initialize audio capture: %w", err)
 	}
 
+	// Initialize transcriber with default paths
+	// In a real scenario, these would be configurable.
+	binaryPath := "whisper/whisper.cpp/main"
+	modelPath := "whisper/models/ggml-small.bin"
+
 	return &Manager{
-		capture: capturer,
+		capture:     capturer,
+		transcriber: transcriber.NewWhisper(binaryPath, modelPath),
 	}, nil
 }
 
@@ -92,6 +102,35 @@ func (m *Manager) StopRecording(callID string) error {
 	}
 
 	m.currentSession.AudioPath = audioPath
+
+	// Trigger transcription in background
+	go func(sess *Session) {
+		m.mu.Lock()
+		m.isTranscribing = true
+		m.mu.Unlock()
+		defer func() {
+			m.mu.Lock()
+			m.isTranscribing = false
+			m.mu.Unlock()
+		}()
+
+		fmt.Printf("Starting transcription for session %s (%s)...\n", sess.CallID, sess.AudioPath)
+		transcript, err := m.transcriber.Transcribe(sess.AudioPath)
+		if err != nil {
+			fmt.Printf("Transcription failed for session %s: %v\n", sess.CallID, err)
+			return
+		}
+
+		// Save transcription to a file next to the audio
+		transcriptPath := sess.AudioPath + ".txt"
+		if err := os.WriteFile(transcriptPath, []byte(transcript.Text), 0644); err != nil {
+			fmt.Printf("Failed to save transcript for session %s: %v\n", sess.CallID, err)
+			return
+		}
+
+		fmt.Printf("Transcription complete for session %s. Result saved to %s\n", sess.CallID, transcriptPath)
+	}(m.currentSession)
+
 	m.currentSession = nil
 	return nil
 }
@@ -102,7 +141,8 @@ func (m *Manager) GetStatus() api.StatusData {
 	defer m.mu.RUnlock()
 
 	status := api.StatusData{
-		IsRecording: m.currentSession != nil,
+		IsRecording:    m.currentSession != nil,
+		IsTranscribing: m.isTranscribing,
 	}
 
 	if m.currentSession != nil {

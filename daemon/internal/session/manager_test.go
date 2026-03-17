@@ -2,14 +2,18 @@ package session
 
 import (
 	"github.com/fulvian/verbalizer/daemon/internal/audio"
+	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
 	"github.com/fulvian/verbalizer/daemon/pkg/api"
 	"testing"
+	"time"
 )
 
 func TestSessionManager(t *testing.T) {
 	mockCapture := audio.NewMockCapture()
+	mockTranscriber := transcriber.NewMockTranscriber()
 	sm := &Manager{
-		capture: mockCapture,
+		capture:     mockCapture,
+		transcriber: mockTranscriber,
 	}
 
 	t.Run("InitialState", func(t *testing.T) {
@@ -57,6 +61,13 @@ func TestSessionManager(t *testing.T) {
 		err := sm.StopRecording("call-123")
 		if err != nil {
 			t.Fatalf("Failed to stop recording: %v", err)
+		}
+
+		// Wait a bit for background transcription
+		time.Sleep(100 * time.Millisecond)
+
+		if mockTranscriber.TranscribeCount != 1 {
+			t.Errorf("Expected Transcribe to be called once, got %d", mockTranscriber.TranscribeCount)
 		}
 
 		status := sm.GetStatus()

@@ -48,6 +48,7 @@ type Response struct {
 // StatusData contains the current daemon status.
 type StatusData struct {
 	IsRecording    bool     `json:"isRecording"`
+	IsTranscribing bool     `json:"isTranscribing"`
 	CurrentCallID  string   `json:"currentCallId,omitempty"`
 	Platform       Platform `json:"platform,omitempty"`
 	AudioPath      string   `json:"audioPath,omitempty"`
