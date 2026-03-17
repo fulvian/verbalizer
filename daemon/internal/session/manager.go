@@ -10,18 +10,21 @@ import (
 	"time"
 
 	"github.com/fulvian/verbalizer/daemon/internal/audio"
+	"github.com/fulvian/verbalizer/daemon/internal/config"
 	"github.com/fulvian/verbalizer/daemon/internal/formatter"
+	"github.com/fulvian/verbalizer/daemon/internal/storage"
 	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
 	"github.com/fulvian/verbalizer/daemon/pkg/api"
 )
 
 // Session represents an active recording session.
 type Session struct {
-	CallID    string
-	Platform  api.Platform
-	Title     string
-	StartTime time.Time
-	AudioPath string
+	CallID         string
+	Platform       api.Platform
+	Title          string
+	StartTime      time.Time
+	AudioPath      string
+	TranscriptPath string
 }
 
 // Manager manages active recording sessions.
@@ -31,11 +34,13 @@ type Manager struct {
 	capture        audio.Capture
 	transcriber    transcriber.Transcriber
 	formatter      formatter.Formatter
+	db             *storage.Database
+	config         *config.Config
 	isTranscribing bool
 }
 
 // NewManager creates a new session manager.
-func NewManager() (*Manager, error) {
+func NewManager(cfg *config.Config) (*Manager, error) {
 	var capturer audio.Capture
 	var err error
 
@@ -52,6 +57,11 @@ func NewManager() (*Manager, error) {
 		return nil, fmt.Errorf("failed to initialize audio capture: %w", err)
 	}
 
+	db, err := storage.NewDatabase(cfg.DBPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize database: %w", err)
+	}
+
 	// Initialize transcriber with default paths
 	// In a real scenario, these would be configurable.
 	binaryPath := "whisper/whisper.cpp/main"
@@ -61,6 +71,8 @@ func NewManager() (*Manager, error) {
 		capture:     capturer,
 		transcriber: transcriber.NewWhisper(binaryPath, modelPath),
 		formatter:   formatter.NewMarkdownFormatter(),
+		db:          db,
+		config:      cfg,
 	}, nil
 }
 
@@ -82,6 +94,17 @@ func (m *Manager) StartRecording(payload api.StartRecordingPayload) error {
 		Platform:  payload.Platform,
 		Title:     payload.Title,
 		StartTime: time.Now(),
+	}
+
+	// Save session to database
+	dbSess := &storage.Session{
+		CallID:    m.currentSession.CallID,
+		Platform:  string(m.currentSession.Platform),
+		Title:     m.currentSession.Title,
+		StartTime: m.currentSession.StartTime,
+	}
+	if err := m.db.SaveSession(dbSess); err != nil {
+		fmt.Printf("Failed to save session to database: %v\n", err)
 	}
 
 	return nil
@@ -163,9 +186,9 @@ func (m *Manager) StopRecording(callID string) error {
 		// Filename format: YYYY-MM-DD_HH-MM-SS_platform.md
 		timestamp := sess.StartTime.Format("2006-01-02_15-04-05")
 		mdFilename := fmt.Sprintf("%s_%s.md", timestamp, sess.Platform)
-		mdPath := filepath.Join("transcripts", mdFilename)
+		mdPath := filepath.Join(m.config.TranscriptsDir, mdFilename)
 
-		if err := os.MkdirAll("transcripts", 0755); err != nil {
+		if err := os.MkdirAll(m.config.TranscriptsDir, 0755); err != nil {
 			fmt.Printf("Failed to create transcripts directory: %v\n", err)
 			return
 		}
@@ -173,6 +196,18 @@ func (m *Manager) StopRecording(callID string) error {
 		if err := os.WriteFile(mdPath, []byte(markdown), 0644); err != nil {
 			fmt.Printf("Failed to save Markdown transcript for session %s: %v\n", sess.CallID, err)
 			return
+		}
+
+		// Update session in database
+		endTime := time.Now()
+		dbSess := &storage.Session{
+			CallID:         sess.CallID,
+			EndTime:        &endTime,
+			AudioPath:      sess.AudioPath,
+			TranscriptPath: mdPath,
+		}
+		if err := m.db.UpdateSession(dbSess); err != nil {
+			fmt.Printf("Failed to update session in database: %v\n", err)
 		}
 
 		fmt.Printf("Transcription complete for session %s. Result saved to %s and %s\n", sess.CallID, transcriptPath, mdPath)

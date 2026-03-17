@@ -1,21 +1,51 @@
 package session
 
 import (
-	"github.com/fulvian/verbalizer/daemon/internal/audio"
-	"github.com/fulvian/verbalizer/daemon/internal/formatter"
-	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
-	"github.com/fulvian/verbalizer/daemon/pkg/api"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/fulvian/verbalizer/daemon/internal/audio"
+	"github.com/fulvian/verbalizer/daemon/internal/config"
+	"github.com/fulvian/verbalizer/daemon/internal/formatter"
+	"github.com/fulvian/verbalizer/daemon/internal/storage"
+	"github.com/fulvian/verbalizer/daemon/internal/transcriber"
+	"github.com/fulvian/verbalizer/daemon/pkg/api"
 )
 
 func TestSessionManager(t *testing.T) {
+	// Setup temporary directory for testing
+	tmpDir, err := os.MkdirTemp("", "verbalizer-session-test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := config.DefaultConfig()
+	cfg.DataDir = tmpDir
+	cfg.RecordingsDir = filepath.Join(tmpDir, "recordings")
+	cfg.TranscriptsDir = filepath.Join(tmpDir, "transcripts")
+	cfg.DBPath = filepath.Join(tmpDir, "test.db")
+
+	if err := cfg.EnsureDirs(); err != nil {
+		t.Fatalf("Failed to ensure dirs: %v", err)
+	}
+
+	db, err := storage.NewDatabase(cfg.DBPath)
+	if err != nil {
+		t.Fatalf("Failed to create database: %v", err)
+	}
+	defer db.Close()
+
 	mockCapture := audio.NewMockCapture()
 	mockTranscriber := transcriber.NewMockTranscriber()
 	sm := &Manager{
 		capture:     mockCapture,
 		transcriber: mockTranscriber,
 		formatter:   formatter.NewMarkdownFormatter(),
+		db:          db,
+		config:      cfg,
 	}
 
 	t.Run("InitialState", func(t *testing.T) {

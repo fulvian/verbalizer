@@ -11,6 +11,7 @@ type Config struct {
 	DataDir        string `yaml:"data_dir"`
 	RecordingsDir  string `yaml:"recordings_dir"`
 	TranscriptsDir string `yaml:"transcripts_dir"`
+	DBPath         string `yaml:"db_path"`
 
 	Audio         AudioConfig         `yaml:"audio"`
 	Transcription TranscriptionConfig `yaml:"transcription"`
@@ -46,6 +47,7 @@ func DefaultConfig() *Config {
 		DataDir:        dataDir,
 		RecordingsDir:  filepath.Join(dataDir, "recordings"),
 		TranscriptsDir: filepath.Join(dataDir, "transcripts"),
+		DBPath:         filepath.Join(dataDir, "verbalizer.db"),
 		Audio: AudioConfig{
 			Format:     "mp3",
 			Bitrate:    "128k",

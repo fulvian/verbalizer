@@ -31,7 +31,7 @@ func run() error {
 	}
 
 	// Initialize components
-	sessionMgr, err := session.NewManager()
+	sessionMgr, err := session.NewManager(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize session manager: %w", err)
 	}

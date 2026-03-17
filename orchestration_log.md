@@ -47,23 +47,8 @@
 | 5 | Audio Capture | dev_team-backend_dev | Fase 4 | ✅ COMPLETED |
 | 6 | STT Integration | dev_team-backend_dev | Fase 5 | ✅ COMPLETED |
 | 7 | Output Generation | dev_team-backend_dev | Fase 6 | ✅ COMPLETED |
-| 8 | Storage & DB | dev_team-backend_dev | Fase 7 | 🟡 IN PROGRESS |
-
----
-
-## FASE 7: Output Generation (2026-03-16)
-
-### Subtask 7.1: Markdown Formatter
-- Task: Implement `daemon/internal/formatter/markdown.go` using templates
-- Agent: dev_team-backend_dev
-- Status: COMPLETED
-- Output: `daemon/internal/formatter/markdown.go`, `markdown_test.go`
-
-### Subtask 7.2: Integration
-- Task: Integrate formatter with SessionManager lifecycle
-- Agent: dev_team-backend_dev
-- Status: COMPLETED
-- Output: `SessionManager` generates Markdown files in `transcripts/` after transcription.
+| 8 | Storage & DB | dev_team-backend_dev | Fase 7 | ✅ COMPLETED |
+| 9 | Service Install | dev_team-devops_engineer | Fase 8 | 🟡 IN PROGRESS |
 
 ---
 
@@ -72,7 +57,34 @@
 ### Subtask 8.1: SQLite Schema
 - Task: Implement SQLite schema and database operations
 - Agent: dev_team-backend_dev
+- Status: COMPLETED
+- Output: `daemon/internal/storage/database.go`, `database_test.go`
+
+### Subtask 8.2: Session Persistence
+- Task: Persist session metadata and transcript paths to database
+- Agent: dev_team-backend_dev
+- Status: COMPLETED
+- Output: `SessionManager` saves/updates session records in `verbalizer.db`.
+
+---
+
+## FASE 9: Service Installation (2026-03-16)
+
+### Subtask 9.1: Linux Installation (systemd)
+- Task: Finalize systemd unit file and installation script
+- Agent: dev_team-devops_engineer
 - Status: DELEGATED
+
+### Subtask 9.2: macOS Installation (launchd)
+- Task: Finalize launchd plist and installation script
+- Agent: dev_team-devops_engineer
+- Status: DELEGATED
+
+### Subtask 9.3: Native Messaging Registration
+- Task: Create JSON manifest for Chrome and register the host
+- Agent: dev_team-devops_engineer
+- Status: DELEGATED
+
 
 ### Subtask 8.2: Session Persistence
 - Task: Persist session metadata and transcript paths to database
