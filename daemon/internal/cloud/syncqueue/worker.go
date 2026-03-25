@@ -2,12 +2,12 @@
 package syncqueue
 
 import (
-	"fmt"
 	"math/rand"
 	"time"
 
 	"github.com/fulvian/verbalizer/daemon/internal/cloud/driveclient"
 	"github.com/fulvian/verbalizer/daemon/internal/config"
+	"github.com/fulvian/verbalizer/daemon/internal/logger"
 	"github.com/fulvian/verbalizer/daemon/internal/storage"
 )
 
@@ -60,7 +60,7 @@ func (w *Worker) processLoop() {
 func (w *Worker) processBatch() {
 	jobs, err := w.db.GetPendingCloudSyncJobs(5)
 	if err != nil {
-		fmt.Printf("Failed to get pending jobs: %v\n", err)
+		logger.Error("Failed to get pending jobs", logger.Err(err))
 		return
 	}
 
@@ -85,7 +85,7 @@ func (w *Worker) processJob(job *storage.CloudSyncJob) {
 	job.AttemptCount++
 	job.UpdatedAt = time.Now()
 	if err := w.db.UpdateCloudSyncJob(job); err != nil {
-		fmt.Printf("Failed to update job %d: %v\n", job.ID, err)
+		logger.Error("Failed to update job", logger.Int64("job_id", job.ID), logger.Err(err))
 		return
 	}
 
@@ -103,47 +103,46 @@ func (w *Worker) processJob(job *storage.CloudSyncJob) {
 	job.LastErrorCode = 0
 	job.LastErrorMessage = ""
 	if err := w.db.UpdateCloudSyncJob(job); err != nil {
-		fmt.Printf("Failed to update job %d on success: %v\n", job.ID, err)
+		logger.Error("Failed to update job on success", logger.Int64("job_id", job.ID), logger.Err(err))
 	}
 
 	// Update session
 	if err := w.updateSessionCloudState(job.SessionCallID, "synced", result.FileID); err != nil {
-		fmt.Printf("Failed to update session cloud state: %v\n", err)
+		logger.Error("Failed to update session cloud state", logger.Err(err))
 	}
 
-	fmt.Printf("Sync job %d completed: %s -> %s\n", job.ID, job.LocalPath, result.FileID)
+	logger.Cloud().SyncComplete(job.SessionCallID)
 }
 
 // handleUploadError handles a failed upload attempt.
 func (w *Worker) handleUploadError(job *storage.CloudSyncJob, uploadErr error) {
-	errMsg := uploadErr.Error()
-
-	// Determine if error is retryable
-	retryable := isRetryableError(uploadErr)
+	cat := logger.CategorizeError(uploadErr)
+	retryable := cat.IsRetryable()
 
 	if !retryable || job.AttemptCount >= w.config.MaxAttempts {
 		job.State = "permanent_failed"
-		fmt.Printf("Sync job %d permanently failed: %v\n", job.ID, uploadErr)
+		logger.Cloud().SyncPermanentFail(job.SessionCallID, uploadErr)
 	} else {
 		job.State = "failed"
 		delay := w.calculateBackoff(job.AttemptCount)
+		delaySec := int(delay.Seconds())
 		nextRetry := time.Now().Add(delay)
 		job.NextRetryAt = &nextRetry
-		fmt.Printf("Sync job %d failed, retry in %v: %v\n", job.ID, delay, uploadErr)
+		logger.Cloud().UploadRetry(job.SessionCallID, job.AttemptCount, w.config.MaxAttempts, delaySec)
 	}
 
-	job.LastErrorMessage = errMsg
+	job.LastErrorMessage = uploadErr.Error()
 	job.UpdatedAt = time.Now()
 
 	if err := w.db.UpdateCloudSyncJob(job); err != nil {
-		fmt.Printf("Failed to update job %d: %v\n", job.ID, err)
+		logger.Error("Failed to update job", logger.Int64("job_id", job.ID), logger.Err(err))
 	}
 }
 
 // calculateBackoff calculates exponential backoff with jitter.
 func (w *Worker) calculateBackoff(attempt int) time.Duration {
 	// Exponential backoff: base * 2^attempt
-	multiplier := 1 << attempt // 2^attempt
+	multiplier := 1 << attempt
 	delay := w.config.BaseDelaySeconds * multiplier
 
 	// Cap at max delay
@@ -160,83 +159,6 @@ func (w *Worker) calculateBackoff(attempt int) time.Duration {
 	}
 
 	return time.Duration(delay) * time.Second
-}
-
-// isRetryableError determines if an error should trigger a retry.
-func isRetryableError(err error) bool {
-	errStr := err.Error()
-
-	// Network errors typically contain these patterns
-	networkPatterns := []string{
-		"connection refused",
-		"connection reset",
-		"connection timed out",
-		"no such host",
-		"network",
-		"timeout",
-		"temporary failure",
-		"i/o timeout",
-	}
-
-	for _, pattern := range networkPatterns {
-		if contains(errStr, pattern) {
-			return true
-		}
-	}
-
-	// HTTP 5xx errors are retryable
-	http5xxPatterns := []string{
-		"status 500",
-		"status 502",
-		"status 503",
-		"status 504",
-	}
-
-	for _, pattern := range http5xxPatterns {
-		if contains(errStr, pattern) {
-			return true
-		}
-	}
-
-	// HTTP 429 (rate limit) is retryable
-	if contains(errStr, "status 429") {
-		return true
-	}
-
-	return false
-}
-
-// contains checks if s contains substr (case-insensitive).
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && containsImpl(s, substr))
-}
-
-func containsImpl(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if equalFold(s[i:i+len(substr)], substr) {
-			return true
-		}
-	}
-	return false
-}
-
-func equalFold(a, b string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := 0; i < len(a); i++ {
-		ca, cb := a[i], b[i]
-		if ca >= 'A' && ca <= 'Z' {
-			ca += 'a' - 'A'
-		}
-		if cb >= 'A' && cb <= 'Z' {
-			cb += 'a' - 'A'
-		}
-		if ca != cb {
-			return false
-		}
-	}
-	return true
 }
 
 // updateSessionCloudState updates the session's cloud sync state.
