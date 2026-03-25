@@ -9,6 +9,7 @@ Automatic audio recording, transcription, and documentation for Google Meet and 
 - **Local Transcription**: Uses whisper.cpp for privacy-first, local speech-to-text
 - **Markdown Output**: Generates clean, timestamped transcripts in Markdown format
 - **Cross-Platform**: Works on macOS and Linux
+- **Cloud Sync** (coming soon): Automatically backup transcripts to your Google Drive
 
 ## Requirements
 
@@ -90,7 +91,8 @@ Once installed, Verbalizer runs automatically in the background:
 │   └── 2026-03-16_09-30-00_google-meet.mp3
 ├── transcripts/         # Markdown transcripts
 │   └── 2026-03-16_09-30-00_google-meet.md
-└── metadata.db          # SQLite index
+├── verbalizer.db       # SQLite index
+└── .secrets/           # Encrypted credentials (cloud sync)
 ```
 
 ## Architecture

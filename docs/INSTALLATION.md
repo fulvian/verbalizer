@@ -113,3 +113,34 @@ To verify the installation:
   1. Ensure the whisper model has been downloaded correctly using `./scripts/download-model.sh`.
   2. Create the whisper-cli symlink: `ln -sf build/bin/whisper-cli whisper/whisper.cpp/main`
   3. Ensure the daemon binary was built for the correct OS (Linux x86-64 vs macOS ARM64).
+
+## Google Drive Sync (Optional)
+
+Verbalizer can automatically backup your transcripts to Google Drive.
+
+### Setup
+
+1. **Create OAuth credentials** in the [Google Cloud Console](https://console.cloud.google.com/):
+   - Go to **APIs & Services > Credentials**
+   - Create an **OAuth client ID** of type "Desktop app"
+   - Note the client ID
+
+2. **Configure the client ID** in `~/.config/verbalizer/config.yaml`:
+   ```yaml
+   cloud:
+     enabled: true
+     oauth_client_id: "YOUR_CLIENT_ID.apps.googleusercontent.com"
+   ```
+
+3. **Restart the daemon**:
+   - **macOS**: `launchctl unload ~/Library/LaunchAgents/com.verbalizer.daemon.plist && launchctl load ~/Library/LaunchAgents/com.verbalizer.daemon.plist`
+   - **Linux**: `systemctl --user restart verbalizerd`
+
+4. **Connect your Google account** via the extension settings page (coming soon)
+
+### How It Works
+
+- Transcripts are uploaded to a folder in your Google Drive called "Verbalizer"
+- OAuth uses the `drive.file` scope (only access to files created by Verbalizer)
+- Credentials are stored securely in your system's keychain/secret service
+- Failed uploads are automatically retried with exponential backoff

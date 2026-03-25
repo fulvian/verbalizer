@@ -2,8 +2,11 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Config holds the daemon configuration.
@@ -16,6 +19,27 @@ type Config struct {
 	Audio         AudioConfig         `yaml:"audio"`
 	Transcription TranscriptionConfig `yaml:"transcription"`
 	Logging       LoggingConfig       `yaml:"logging"`
+	Cloud         CloudConfig         `yaml:"cloud"`
+}
+
+// CloudConfig holds cloud synchronization settings.
+type CloudConfig struct {
+	Enabled           bool        `yaml:"enabled"`
+	Provider          string      `yaml:"provider"` // "google_drive"
+	OAuthClientID     string      `yaml:"oauth_client_id"`
+	OAuthRedirectHost string      `yaml:"oauth_redirect_host"`
+	OAuthRedirectPort string      `yaml:"oauth_redirect_port_range"`
+	Scope             string      `yaml:"scope"`
+	TargetFolderID    string      `yaml:"target_folder_id"`
+	UploadMode        string      `yaml:"upload_mode"` // "multipart" or "resumable"
+	Retry             RetryConfig `yaml:"retry"`
+}
+
+// RetryConfig holds retry policy settings.
+type RetryConfig struct {
+	MaxAttempts      int `yaml:"max_attempts"`
+	BaseDelaySeconds int `yaml:"base_delay_seconds"`
+	MaxDelaySeconds  int `yaml:"max_delay_seconds"`
 }
 
 // AudioConfig holds audio-related settings.
@@ -61,6 +85,19 @@ func DefaultConfig() *Config {
 		Logging: LoggingConfig{
 			Level: "info",
 		},
+		Cloud: CloudConfig{
+			Enabled:           false,
+			Provider:          "google_drive",
+			OAuthRedirectHost: "127.0.0.1",
+			OAuthRedirectPort: "49152-65535",
+			Scope:             "https://www.googleapis.com/auth/drive.file",
+			UploadMode:        "multipart",
+			Retry: RetryConfig{
+				MaxAttempts:      20,
+				BaseDelaySeconds: 30,
+				MaxDelaySeconds:  7200,
+			},
+		},
 	}
 }
 
@@ -68,9 +105,60 @@ func DefaultConfig() *Config {
 func Load(path string) (*Config, error) {
 	cfg := DefaultConfig()
 
-	// TODO: Implement YAML file loading
+	if path == "" {
+		return cfg, nil
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// File doesn't exist, return defaults
+			return cfg, nil
+		}
+		return nil, fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	// Parse YAML
+	if err := yaml.Unmarshal(data, cfg); err != nil {
+		return nil, fmt.Errorf("failed to parse config file: %w", err)
+	}
+
+	// Ensure directories use defaults if not specified
+	if cfg.DataDir == "" {
+		homeDir, _ := os.UserHomeDir()
+		cfg.DataDir = filepath.Join(homeDir, "verbalizer")
+	}
+	if cfg.RecordingsDir == "" {
+		cfg.RecordingsDir = filepath.Join(cfg.DataDir, "recordings")
+	}
+	if cfg.TranscriptsDir == "" {
+		cfg.TranscriptsDir = filepath.Join(cfg.DataDir, "transcripts")
+	}
+	if cfg.DBPath == "" {
+		cfg.DBPath = filepath.Join(cfg.DataDir, "verbalizer.db")
+	}
 
 	return cfg, nil
+}
+
+// LoadFromDataDir loads configuration from the default data directory.
+func LoadFromDataDir(dataDir string) (*Config, error) {
+	configPath := filepath.Join(dataDir, "config.yaml")
+	return Load(configPath)
+}
+
+// Save saves configuration to a YAML file.
+func (c *Config) Save(path string) error {
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
 }
 
 // EnsureDirs creates necessary directories if they don't exist.
@@ -88,4 +176,9 @@ func (c *Config) EnsureDirs() error {
 	}
 
 	return nil
+}
+
+// IsCloudEnabled returns true if cloud sync is enabled and configured.
+func (c *Config) IsCloudEnabled() bool {
+	return c.Cloud.Enabled && c.Cloud.Provider == "google_drive"
 }

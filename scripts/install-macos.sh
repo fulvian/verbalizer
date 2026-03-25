@@ -136,6 +136,22 @@ transcription:
 logging:
   level: info
   file: $CONFIG_DIR/verbalizer.log
+
+# Cloud sync settings (Google Drive)
+# Set enabled: true and configure oauth_client_id after creating OAuth credentials
+cloud:
+  enabled: false
+  provider: google_drive
+  oauth_client_id: ""  # Create OAuth client ID in Google Cloud Console
+  oauth_redirect_host: "127.0.0.1"
+  oauth_redirect_port_range: "49152-65535"
+  scope: "https://www.googleapis.com/auth/drive.file"
+  target_folder_id: ""
+  upload_mode: "multipart"
+  retry:
+    max_attempts: 20
+    base_delay_seconds: 30
+    max_delay_seconds: 7200
 EOF
 fi
 
