@@ -188,7 +188,7 @@ Verbalizer è un sistema automatico per la registrazione, trascrizione e documen
 | Language | Go 1.21+ |
 | IPC | Unix domain socket |
 | Audio (macOS) | ScreenCaptureKit via CGo |
-| Audio (Linux) | PipeWire via pw-record subprocess |
+| Audio (Linux) | PipeWire via FFmpeg (pulse) |
 | Storage | SQLite + filesystem |
 | Service | systemd (Linux), launchd (macOS) |
 
@@ -201,6 +201,7 @@ Verbalizer è un sistema automatico per la registrazione, trascrizione e documen
 | Memory | ~500MB with INT8 quantization |
 | Speed | ~3x realtime on modern CPU |
 | Invocation | Subprocess with JSON output |
+| Languages | Multilingual (Italian, English, etc.) |
 
 ---
 

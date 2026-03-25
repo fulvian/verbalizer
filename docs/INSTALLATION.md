@@ -19,6 +19,10 @@ Before installing, ensure your system meets the following requirements:
 - **Linux**: 
   - PipeWire is required for audio capture.
   - `systemd` is required for background service management.
+  - **Important**: After installing, create a symlink for whisper.cpp:
+    ```bash
+    ln -sf /path/to/verbalizer/whisper/whisper.cpp/build/bin/whisper-cli /path/to/verbalizer/whisper/whisper.cpp/main
+    ```
 
 ## Quick Installation
 
@@ -102,6 +106,10 @@ To verify the installation:
 
 ## Troubleshooting
 
+- **Audio not captured on Linux**: Ensure PipeWire is running and FFmpeg is installed. Check that `ffmpeg -f pulse -i default` works.
 - **Audio not captured on macOS**: Ensure Chrome and the `verbalizerd` binary have "Screen Recording" permissions in System Settings > Privacy & Security.
 - **Native Host Error**: Check that the path in the `.json` manifest correctly points to the `verbalizer-host` binary.
-- **Transcription issues**: Ensure the whisper model has been downloaded correctly using `./scripts/download-model.sh`.
+- **Transcription issues**: 
+  1. Ensure the whisper model has been downloaded correctly using `./scripts/download-model.sh`.
+  2. Create the whisper-cli symlink: `ln -sf build/bin/whisper-cli whisper/whisper.cpp/main`
+  3. Ensure the daemon binary was built for the correct OS (Linux x86-64 vs macOS ARM64).

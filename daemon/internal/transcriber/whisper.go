@@ -47,8 +47,9 @@ func (w *Whisper) Transcribe(audioPath string) (*Transcript, error) {
 	// -f: input file
 	// -m: model path
 	// -oj: output JSON
+	// -l it: force Italian language
 	// whisper.cpp will create wavPath.json
-	cmd := execCommand(w.binaryPath, "-m", w.modelPath, "-f", wavPath, "-oj")
+	cmd := execCommand(w.binaryPath, "-m", w.modelPath, "-f", wavPath, "-l", "it", "-oj")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("whisper.cpp failed: %w, output: %s", err, string(output))
 	}

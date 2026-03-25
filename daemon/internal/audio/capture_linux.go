@@ -47,11 +47,17 @@ func (c *LinuxCapture) Start() error {
 	c.mp3Path = filepath.Join(recordingsDir, fmt.Sprintf("%s_linux.mp3", timestamp))
 	c.pcmPath = filepath.Join(recordingsDir, fmt.Sprintf("%s_linux.pcm", timestamp))
 
-	// Using pw-record to capture audio. 
-	// Note: Capturing from Chrome specifically might require identifying the correct monitor source.
-	// For now, we capture default monitor which usually contains Chrome audio.
-	// ffmpeg can also be used: ffmpeg -f pulse -i default out.pcm
-	c.cmd = exec.Command("pw-record", "--format=s16", "--rate=44100", "--channels=2", c.pcmPath)
+	// Using pw-record to capture audio from default monitor source.
+	// pw-record outputs WAV format, so we use ffmpeg to capture raw PCM instead.
+	// ffmpeg -f pulse -i default -f s16le -ar 44100 -ac 2 output.pcm
+	c.cmd = exec.Command("ffmpeg",
+		"-f", "pulse",
+		"-i", "default",
+		"-f", "s16le",
+		"-ar", "44100",
+		"-ac", "2",
+		c.pcmPath,
+	)
 
 	if err := c.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start pw-record: %w", err)
@@ -70,10 +76,10 @@ func (c *LinuxCapture) Stop() (string, error) {
 	}
 
 	if c.cmd != nil && c.cmd.Process != nil {
-		// Use Interrupt instead of Kill to allow graceful exit if possible, 
+		// Use Interrupt instead of Kill to allow graceful exit if possible,
 		// but pw-record might need Kill.
 		_ = c.cmd.Process.Signal(os.Interrupt)
-		
+
 		// Wait for process to exit
 		_ = c.cmd.Wait()
 	}
