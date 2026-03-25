@@ -8,6 +8,12 @@ import (
 	"github.com/fulvian/verbalizer/daemon/internal/storage"
 )
 
+// AccountInfoProvider is implemented by types that can provide account information.
+type AccountInfoProvider interface {
+	GetEmail() string
+	GetName() string
+}
+
 // AuthProvider defines the interface for cloud authentication providers.
 type AuthProvider interface {
 	// StartAuth initiates the OAuth flow and returns the auth URL to open in browser.
@@ -16,8 +22,8 @@ type AuthProvider interface {
 	// CompleteAuth finishes the OAuth flow with the authorization code.
 	CompleteAuth(code string) error
 
-	// GetAccountInfo returns the authenticated user's account information.
-	GetAccountInfo() (*AccountInfo, error)
+	// GetAccountInfo returns account information as key-value pairs.
+	GetAccountInfo() (AccountInfoProvider, error)
 
 	// Revoke revokes the current authentication.
 	Revoke() error
@@ -27,12 +33,6 @@ type AuthProvider interface {
 
 	// GetProvider returns the cloud provider type.
 	GetProvider() storage.CloudProvider
-}
-
-// AccountInfo represents authenticated user account details.
-type AccountInfo struct {
-	Email string
-	Name  string
 }
 
 // CloudUploader defines the interface for uploading files to cloud storage.

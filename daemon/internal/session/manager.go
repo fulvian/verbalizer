@@ -76,6 +76,11 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 	}, nil
 }
 
+// GetDatabase returns the database instance for use by other managers.
+func (m *Manager) GetDatabase() *storage.Database {
+	return m.db
+}
+
 // StartRecording starts a new recording session.
 func (m *Manager) StartRecording(payload api.StartRecordingPayload) error {
 	m.mu.Lock()

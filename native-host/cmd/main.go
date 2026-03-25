@@ -46,6 +46,21 @@ func handleMessage(client *ipc.Client, msg *messaging.Message) *messaging.Respon
 		daemonCmd = "STOP_RECORDING"
 	case "GET_STATUS":
 		daemonCmd = "GET_STATUS"
+	// Cloud commands
+	case "GOOGLE_AUTH_START":
+		daemonCmd = "GOOGLE_AUTH_START"
+	case "GOOGLE_AUTH_STATUS":
+		daemonCmd = "GOOGLE_AUTH_STATUS"
+	case "GOOGLE_AUTH_DISCONNECT":
+		daemonCmd = "GOOGLE_AUTH_DISCONNECT"
+	case "GOOGLE_DRIVE_SET_FOLDER":
+		daemonCmd = "GOOGLE_DRIVE_SET_FOLDER"
+	case "GOOGLE_DRIVE_GET_FOLDER":
+		daemonCmd = "GOOGLE_DRIVE_GET_FOLDER"
+	case "GOOGLE_DRIVE_SYNC_STATUS":
+		daemonCmd = "GOOGLE_DRIVE_SYNC_STATUS"
+	case "GOOGLE_DRIVE_SYNC_RETRY":
+		daemonCmd = "GOOGLE_DRIVE_SYNC_RETRY"
 	case "ping":
 		return &messaging.Response{Success: true, Data: "pong"}
 	default:

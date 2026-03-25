@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
+	cloudmgr "github.com/fulvian/verbalizer/daemon/internal/cloud/manager"
 	"github.com/fulvian/verbalizer/daemon/internal/config"
 	"github.com/fulvian/verbalizer/daemon/internal/ipc"
+	"github.com/fulvian/verbalizer/daemon/internal/secrets"
 	"github.com/fulvian/verbalizer/daemon/internal/session"
 )
 
@@ -30,12 +33,23 @@ func run() error {
 		return fmt.Errorf("failed to ensure directories: %w", err)
 	}
 
+	// Initialize secrets store
+	secretsDir := filepath.Join(cfg.DataDir, ".secrets")
+	secretsStore, err := secrets.NewFileSecretStore(secretsDir)
+	if err != nil {
+		return fmt.Errorf("failed to initialize secrets store: %w", err)
+	}
+
 	// Initialize components
 	sessionMgr, err := session.NewManager(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to initialize session manager: %w", err)
 	}
-	handler := NewDaemonHandler(sessionMgr)
+
+	// Initialize cloud manager
+	cloudMgr := cloudmgr.NewManager(cfg, sessionMgr.GetDatabase(), secretsStore)
+
+	handler := NewDaemonHandler(sessionMgr, cloudMgr)
 	server := ipc.NewServer(ipc.DefaultSocketPath, handler)
 
 	// Start IPC server
@@ -61,6 +75,7 @@ func run() error {
 	fmt.Println("Verbalizer daemon starting...")
 	fmt.Printf("Socket path: %s\n", ipc.DefaultSocketPath)
 	fmt.Printf("Recordings dir: %s\n", cfg.RecordingsDir)
+	fmt.Printf("Cloud sync enabled: %v\n", cfg.IsCloudEnabled())
 
 	// Wait for shutdown
 	<-ctx.Done()
