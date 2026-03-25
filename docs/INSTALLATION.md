@@ -138,7 +138,11 @@ Verbalizer can automatically backup your transcripts to Google Drive.
    - **macOS**: `launchctl unload ~/Library/LaunchAgents/com.verbalizer.daemon.plist && launchctl load ~/Library/LaunchAgents/com.verbalizer.daemon.plist`
    - **Linux**: `systemctl --user restart verbalizerd`
 
-4. **Connect your Google account** via the extension settings page (coming soon)
+4. **Connect your Google account** via the extension settings page:
+   - Click the Verbalizer extension icon in Chrome
+   - Select "Settings" or "Options"
+   - Click "Connect Google Account" and follow the OAuth flow
+   - Select your preferred Google Drive folder for transcript backups
 
 ### How It Works
 

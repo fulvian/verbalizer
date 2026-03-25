@@ -2,8 +2,8 @@
 ## Salvataggio trascrizioni in Google Drive con OAuth 2.0 (profilo personale utente)
 
 **Data:** 2026-03-25  
-**Stato:** Draft per approvazione formale  
-**Scope di questa fase:** progettazione e pianificazione dettagliata (nessuna modifica codice)
+**Stato:** ✅ COMPLETATO (tutte le milestone completate)
+**Ultimo commit:** `afd06bc` (Milestone E - Hardening)
 
 ---
 
