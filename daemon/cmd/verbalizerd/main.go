@@ -8,7 +8,9 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/fulvian/verbalizer/daemon/internal/cloud/driveclient"
 	cloudmgr "github.com/fulvian/verbalizer/daemon/internal/cloud/manager"
+	"github.com/fulvian/verbalizer/daemon/internal/cloud/syncqueue"
 	"github.com/fulvian/verbalizer/daemon/internal/config"
 	"github.com/fulvian/verbalizer/daemon/internal/ipc"
 	"github.com/fulvian/verbalizer/daemon/internal/secrets"
@@ -49,6 +51,16 @@ func run() error {
 	// Initialize cloud manager
 	cloudMgr := cloudmgr.NewManager(cfg, sessionMgr.GetDatabase(), secretsStore)
 
+	// Initialize sync queue worker if cloud is enabled
+	var syncWorker *syncqueue.Worker
+	if cfg.IsCloudEnabled() {
+		driveClient := driveclient.NewDriveClient(&cfg.Cloud, secretsStore)
+		syncWorker = syncqueue.NewWorker(sessionMgr.GetDatabase(), driveClient, &cfg.Cloud.Retry)
+		syncWorker.Start()
+		sessionMgr.SetSyncQueue(syncWorker)
+		fmt.Println("Cloud sync worker started")
+	}
+
 	handler := NewDaemonHandler(sessionMgr, cloudMgr)
 	server := ipc.NewServer(ipc.DefaultSocketPath, handler)
 
@@ -69,6 +81,9 @@ func run() error {
 	go func() {
 		<-sigChan
 		fmt.Println("\nShutting down...")
+		if syncWorker != nil {
+			syncWorker.Stop()
+		}
 		cancel()
 	}()
 

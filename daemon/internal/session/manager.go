@@ -37,6 +37,17 @@ type Manager struct {
 	db             *storage.Database
 	config         *config.Config
 	isTranscribing bool
+	syncQueue      SyncQueue
+}
+
+// SyncQueue defines the interface for sync job queuing.
+type SyncQueue interface {
+	Enqueue(callID string, localPath string, folderID string) error
+}
+
+// SetSyncQueue sets the sync queue for cloud uploads.
+func (m *Manager) SetSyncQueue(q SyncQueue) {
+	m.syncQueue = q
 }
 
 // NewManager creates a new session manager.
@@ -213,6 +224,15 @@ func (m *Manager) StopRecording(callID string) error {
 		}
 		if err := m.db.UpdateSession(dbSess); err != nil {
 			fmt.Printf("Failed to update session in database: %v\n", err)
+		}
+
+		// Enqueue for cloud sync if configured
+		if m.syncQueue != nil && m.config.IsCloudEnabled() && m.config.Cloud.TargetFolderID != "" {
+			if err := m.syncQueue.Enqueue(sess.CallID, mdPath, m.config.Cloud.TargetFolderID); err != nil {
+				fmt.Printf("Failed to enqueue cloud sync for session %s: %v\n", sess.CallID, err)
+			} else {
+				fmt.Printf("Enqueued cloud sync for session %s\n", sess.CallID)
+			}
 		}
 
 		fmt.Printf("Transcription complete for session %s. Result saved to %s and %s\n", sess.CallID, transcriptPath, mdPath)
