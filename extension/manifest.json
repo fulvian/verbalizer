@@ -39,5 +39,6 @@
       "48": "icons/icon48.png"
     },
     "default_title": "Verbalizer"
-  }
+  },
+  "options_page": "options.html"
 }

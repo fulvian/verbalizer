@@ -39,6 +39,45 @@ interface NativeResponse {
 }
 
 /**
+ * Google Auth status response.
+ */
+interface GoogleAuthStatusResponse {
+  success: boolean;
+  data?: {
+    enabled: boolean;
+    connected: boolean;
+    email?: string;
+    name?: string;
+    provider?: string;
+    scopes?: string;
+  };
+  error?: string;
+}
+
+/**
+ * Google Auth start response.
+ */
+interface GoogleAuthStartResponse {
+  success: boolean;
+  error?: string;
+}
+
+/**
+ * Google Drive folder response.
+ */
+interface GoogleDriveFolderResponse {
+  success: boolean;
+  data?: {
+    folders: Array<{
+      id: string;
+      name: string;
+      parentId?: string;
+    }>;
+  };
+  error?: string;
+}
+
+/**
  * NativeBridge provides a clean API for communicating with the native host.
  */
 export class NativeBridge {
@@ -138,5 +177,55 @@ export class NativeBridge {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Start Google OAuth authentication flow.
+   */
+  async googleAuthStart(): Promise<GoogleAuthStartResponse> {
+    return this.sendNativeMessage<GoogleAuthStartResponse>({
+      type: 'GOOGLE_AUTH_START',
+      payload: {},
+    });
+  }
+
+  /**
+   * Get Google OAuth authentication status.
+   */
+  async googleAuthStatus(): Promise<GoogleAuthStatusResponse> {
+    return this.sendNativeMessage<GoogleAuthStatusResponse>({
+      type: 'GOOGLE_AUTH_STATUS',
+      payload: {},
+    });
+  }
+
+  /**
+   * Disconnect Google account.
+   */
+  async googleAuthDisconnect(): Promise<NativeResponse> {
+    return this.sendNativeMessage<NativeResponse>({
+      type: 'GOOGLE_AUTH_DISCONNECT',
+      payload: {},
+    });
+  }
+
+  /**
+   * Get list of Google Drive folders.
+   */
+  async googleDriveGetFolders(): Promise<GoogleDriveFolderResponse> {
+    return this.sendNativeMessage<GoogleDriveFolderResponse>({
+      type: 'GOOGLE_DRIVE_GET_FOLDER',
+      payload: {},
+    });
+  }
+
+  /**
+   * Set target Google Drive folder.
+   */
+  async googleDriveSetFolder(folderId: string): Promise<NativeResponse> {
+    return this.sendNativeMessage<NativeResponse>({
+      type: 'GOOGLE_DRIVE_SET_FOLDER',
+      payload: { folderId },
+    });
   }
 }

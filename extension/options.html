@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verbalizer Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 20px;
+      color: #333;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin-bottom: 24px;
+      color: #1a73e8;
+    }
+    
+    h2 {
+      font-size: 18px;
+      margin: 24px 0 16px;
+      color: #555;
+    }
+    
+    .card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+    }
+    
+    .status-label {
+      font-weight: 500;
+    }
+    
+    .status-value {
+      color: #666;
+    }
+    
+    .status-connected {
+      color: #34a853;
+    }
+    
+    .status-disconnected {
+      color: #ea4335;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s;
+    }
+    
+    .btn-primary {
+      background: #1a73e8;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1557b0;
+    }
+    
+    .btn-danger {
+      background: #ea4335;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #c5221f;
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    
+    .loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    
+    .error {
+      color: #ea4335;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    
+    .success {
+      color: #34a853;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    
+    .info {
+      font-size: 13px;
+      color: #666;
+      margin-top: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Verbalizer Settings</h1>
+  
+  <h2>Google Drive Sync</h2>
+  <div class="card" id="cloudStatus">
+    <div class="status-row">
+      <span class="status-label">Status:</span>
+      <span class="status-value" id="authStatus">Checking...</span>
+    </div>
+    <div class="status-row" id="emailRow" style="display: none;">
+      <span class="status-label">Account:</span>
+      <span class="status-value" id="accountEmail">-</span>
+    </div>
+    <div class="status-row" id="folderRow" style="display: none;">
+      <span class="status-label">Folder:</span>
+      <span class="status-value" id="targetFolder">Not set</span>
+    </div>
+    
+    <div class="btn-group" id="authButtons">
+      <button class="btn btn-primary" id="btnConnect">Connect Google</button>
+      <button class="btn btn-danger" id="btnDisconnect" style="display: none;">Disconnect</button>
+    </div>
+    
+    <div id="messageArea"></div>
+  </div>
+  
+  <div class="card" id="folderSection" style="display: none;">
+    <h2>Select Drive Folder</h2>
+    <p class="info">Choose a folder in your Google Drive where transcripts will be saved.</p>
+    <select id="folderSelect">
+      <option value="">Loading folders...</option>
+    </select>
+    <div class="btn-group">
+      <button class="btn btn-primary" id="btnSetFolder" disabled>Set Folder</button>
+    </div>
+  </div>
+  
+  <div class="card">
+    <h2>About</h2>
+    <p class="info">
+      Verbalizer automatically records and transcribes your Google Meet and Microsoft Teams calls.
+      Transcripts are saved locally and optionally synced to your Google Drive.
+    </p>
+    <p class="info" style="margin-top: 8px;">
+      Version 0.1.0
+    </p>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

@@ -1,9 +1,11 @@
 const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   entry: {
     background: './src/background/index.ts',
     content: './src/content/index.ts',
+    options: './src/options/options.ts',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -19,6 +21,13 @@ module.exports = {
       },
     ],
   },
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './options.html',
+      filename: 'options.html',
+      chunks: ['options'],
+    }),
+  ],
   resolve: {
     extensions: ['.ts', '.js'],
   },
