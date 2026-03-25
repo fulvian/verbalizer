@@ -167,9 +167,62 @@ Verbalizer è un sistema automatico per la registrazione, trascrizione e documen
 |---------|-----------|
 | Manifest Version | V3 (required) |
 | Permissions | `nativeMessaging`, `tabs`, `storage` |
-| Content Scripts | Meet detector, Teams detector |
+| Content Scripts | Meet detector, Teams detector v2 |
 | Background | Service Worker |
 | Communication | chrome.runtime.sendNativeMessage() |
+
+#### Teams Web Detector v2 Architecture
+
+The Teams Web detector uses a multi-signal scoring approach with state machine:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    TEAMS DETECTOR v2                                 │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                       │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐  │
+│  │  Selector    │───▶│  Evaluator   │───▶│  State Machine       │  │
+│  │  Registry    │    │  (signals)   │    │  (phase transitions)  │  │
+│  └──────────────┘    └──────────────┘    └──────────────────────┘  │
+│         │                   │                      │                 │
+│         ▼                   ▼                      ▼                 │
+│  queryAny/All         collectSignals        idle/prejoin/         │
+│  (fallback)           (multi-signal)        in_call/ending        │
+│                                                                       │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────────┐  │
+│  │  Debounced   │    │  Smart       │    │  Structured          │  │
+│  │  MutationObs │    │  Polling     │    │  Logging             │  │
+│  └──────────────┘    └──────────────┘    └──────────────────────┘  │
+│                                                                       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Components:**
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Selector Registry | `teams-selectors.ts` | Versioned DOM selectors with fallback |
+| Evaluator | `teams-evaluator.ts` | Multi-signal scoring, confidence calculation |
+| State Machine | `teams-evaluator.ts` | Phase transitions with stabilization |
+| Detector | `teams.ts` | Orchestrates observation, polling, notifications |
+
+**Signal Weights:**
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| `callContainer` | 0.25 | Primary call presence indicator |
+| `callActive` | 0.20 | Teams internal call state |
+| `hangupVisible` | 0.20 | Hangup button (G1 fix: = ACTIVE call) |
+| `callControls` | 0.15 | Call control toolbar |
+| `videoCount` | 0.10 | Active video elements |
+| `audioCount` | 0.10 | Active audio elements |
+| `prejoin` | -0.30 | Penalty when prejoin visible |
+
+**State Machine Phases:**
+- `idle` → `prejoin` → `in_call` → `ending` → `idle`
+- START_THRESHOLD: 0.7 (need 70% confidence to enter `in_call`)
+- END_THRESHOLD: 0.3 (need <30% confidence to enter `ending`)
+- STABLE_MS: 2000 (must maintain threshold for 2s before transition)
 
 ### Native Host
 

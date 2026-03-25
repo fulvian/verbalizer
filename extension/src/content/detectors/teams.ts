@@ -1,174 +1,323 @@
 /**
- * Microsoft Teams call detection.
- * Monitors DOM for call state changes in MS Teams.
+ * Microsoft Teams call detection v2
  * 
- * REASONING:
- * MS Teams uses specific DOM structures to indicate call state:
- * - Teams uses different selectors than Meet
- * - We use MutationObserver to detect dynamic changes
- * - Selectors may change when Microsoft updates Teams UI
+ * IMPROVEMENTS over v1:
+ * - G1 fix: hangup button = ACTIVE call signal (not ended!)
+ * - Multi-signal scoring instead of single selector
+ * - State machine with stabilization to prevent flapping
+ * - Visibility checks on all elements (G3 fix)
+ * - Debounced MutationObserver (Phase 2)
+ * 
+ * Architecture:
+ * 1. TeamsStateMachine evaluates signals and manages phase transitions
+ * 2. Polling provides backup when mutations don't fire
+ * 3. MutationObserver provides immediate detection of DOM changes
  */
 
 import { CallStateObserver } from '../observer';
+import {
+  collectSignals,
+  TeamsStateMachine,
+  debounce,
+  EvaluationResult,
+  CallPhase,
+} from './teams-evaluator';
+import {
+  CURRENT_SELECTOR_SET,
+  queryAll,
+} from './teams-selectors';
 
-// MS Teams DOM selectors
-// These selectors are based on MS Teams' current DOM structure
-// They may need updates when Microsoft changes Teams UI
-const TEAMS_SELECTORS = {
-  // Main call container
-  callContainer: '[data-tid="call-container"], .ts-calling-thread',
-  
-  // Active call indicator - present when in an active call
-  activeCall: '[data-tid="call-state"], .calling-live-indicator',
-  
-  // Pre-join screen elements
-  preJoinScreen: '[data-tid="prejoin-screen"]',
-  
-  // Call controls (hang up, leave, etc.)
-  callControls: '[data-tid="call-controls"]',
-  
-  // End call button
-  endCallButton: '[data-tid="hangup-button"], .ts-calling-button',
+// ============================================================================
+// Configuration
+// ============================================================================
 
-  // Meeting title
-  meetingTitle: '[data-tid="meeting-title"], .ts-meeting-title',
+/** Polling interval when idle (1 second) */
+const IDLE_POLL_MS = 1000;
 
-  // Participants panel
-  participantsPanel: '[data-tid="participant-item"], .ts-participant',
-};
+/** Polling interval when transitioning (500ms for faster response) */
+const TRANSITION_POLL_MS = 500;
+
+/** Debounce delay for mutation observer callback */
+const MUTATION_DEBOUNCE_MS = 100;
+
+/** Minimum time between notifications to prevent duplicates */
+const NOTIFICATION_COOLDOWN_MS = 500;
+
+// ============================================================================
+// State
+// ============================================================================
+
+/** State machine for call phase detection */
+let stateMachine: TeamsStateMachine | null = null;
+
+/** Polling interval handle */
+let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+/** MutationObserver instance */
+let mutationObserver: MutationObserver | null = null;
+
+/** Track if we notified call started (for idempotency) */
+let notifiedCallStarted = false;
+
+/** Track if we notified call ended (for idempotency) */
+let notifiedCallEnded = false;
+
+/** Last notification timestamp (for cooldown) */
+let lastNotificationMs = 0;
+
+/** Current poll interval (idle vs transition) */
+let currentPollMs = IDLE_POLL_MS;
+
+// ============================================================================
+// Core Detection Logic
+// ============================================================================
 
 /**
- * Check if user is in an active MS Teams call.
- * 
- * REASONING:
- * MS Teams shows different UI states for:
- * - Pre-join screen: visible before joining
- * - Active call container visible during call
- * - Call controls visible during call
- * - End call button visible when call is ending
+ * Evaluate current DOM state and process through state machine
+ * Returns the evaluation result
  */
-export function isMSTeamsActive(): boolean {
-  // Check for pre-join screen (user hasn't joined yet)
-  const preJoinScreen = document.querySelector(TEAMS_SELECTORS.preJoinScreen);
-  if (preJoinScreen) {
-    return false;
+function evaluateState(): EvaluationResult {
+  if (!stateMachine) {
+    stateMachine = new TeamsStateMachine();
   }
-
-  // Check for active call container
-  const callContainer = document.querySelector(TEAMS_SELECTORS.callContainer);
-  if (!callContainer) {
-    return false;
-  }
-
-  // Check for call-ended indicator
-  const callEnded = document.querySelector(TEAMS_SELECTORS.endCallButton);
-  if (callEnded) {
-    return false; // Call has ended
-  }
-
-  return true;
+  
+  const signals = collectSignals();
+  const result = stateMachine.evaluate(signals);
+  
+  // Update polling speed based on phase
+  updatePollingSpeed(result.phase);
+  
+  return result;
 }
 
 /**
- * Extract meeting title from MS Teams page.
+ * Update polling speed based on current phase
+ * Faster polling during transitions for quicker response
+ */
+function updatePollingSpeed(phase: CallPhase): void {
+  const newPollMs = (phase === 'prejoin' || phase === 'ending')
+    ? TRANSITION_POLL_MS
+    : IDLE_POLL_MS;
+  
+  if (newPollMs !== currentPollMs) {
+    currentPollMs = newPollMs;
+    restartPolling();
+  }
+}
+
+/**
+ * Restart polling with current interval
+ */
+function restartPolling(): void {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+  pollInterval = setInterval(pollCallback, currentPollMs);
+}
+
+/**
+ * Check for call state changes (called by polling)
+ */
+function pollCallback(): void {
+  const result = evaluateState();
+  processEvaluation(result);
+}
+
+/**
+ * Process evaluation result and send notifications
+ * Handles idempotency to prevent duplicate notifications
+ */
+function processEvaluation(result: EvaluationResult): void {
+  const now = Date.now();
+  
+  // Apply cooldown to prevent notification spam
+  if (now - lastNotificationMs < NOTIFICATION_COOLDOWN_MS) {
+    return;
+  }
+  
+  // Only notify on stable phase transitions
+  if (result.phase === 'in_call' && !notifiedCallStarted) {
+    notifiedCallStarted = true;
+    notifiedCallEnded = false;
+    lastNotificationMs = now;
+    
+    logDetection('CALL_START', result);
+    
+    // Extract meeting title from signals
+    const title = result.sample.meetingTitle;
+    observer?.notifyCallStarted(title);
+  } else if (result.phase === 'idle' && notifiedCallStarted && !notifiedCallEnded) {
+    notifiedCallEnded = true;
+    notifiedCallStarted = false;
+    lastNotificationMs = now;
+    
+    logDetection('CALL_END', result);
+    
+    observer?.notifyCallEnded();
+  }
+}
+
+/**
+ * Structured logging for detector events
+ */
+function logDetection(event: string, result: EvaluationResult): void {
+  const prefix = '[TeamsDetector v2]';
+  console.log(`${prefix} ${event}: phase=${result.phase} confidence=${(result.confidence * 100).toFixed(0)}% reasons=[${result.reasons.join(', ')}]`);
+}
+
+// ============================================================================
+// Public API (compatible with v1 interface)
+// ============================================================================
+
+/**
+ * Set up MS Teams detection using v2 evaluator with state machine
  * 
- * REASONING:
- * Meeting title is usually in the document title or
- * - May be in a specific element with data-tid
+ * IMPROVEMENTS:
+ * - Multi-signal scoring (not single selector)
+ * - Stabilization to prevent flapping
+ * - G1 fix: hangup button = active call (not ended!)
+ * - Visibility checks on all elements
+ * - Debounced mutation observer
+ * - Smart polling speed
+ */
+export function detectMSTeams(observerInstance: CallStateObserver): void {
+  // Initialize observer reference
+  observer = observerInstance;
+  
+  // Initialize state machine
+  stateMachine = new TeamsStateMachine();
+  notifiedCallStarted = false;
+  notifiedCallEnded = false;
+  lastNotificationMs = 0;
+  currentPollMs = IDLE_POLL_MS;
+  
+  // Initial evaluation
+  const initialResult = evaluateState();
+  processEvaluation(initialResult);
+  
+  // Set up polling for continuous monitoring
+  pollInterval = setInterval(pollCallback, currentPollMs);
+  
+  // Set up debounced MutationObserver for immediate detection
+  const { fn: debouncedCheck, cancel: cancelDebounce } = debounce(() => {
+    const result = evaluateState();
+    processEvaluation(result);
+  }, MUTATION_DEBOUNCE_MS);
+  
+  mutationObserver = new MutationObserver((mutations) => {
+    // Filter to relevant mutations only
+    const hasRelevantChanges = mutations.some(mutation => {
+      // Look for additions of call-related elements
+      if (mutation.type === 'childList') {
+        const addedNodes = mutation.addedNodes;
+        if (addedNodes && addedNodes.length > 0) {
+          return true;
+        }
+      }
+      // Look for attribute changes on relevant elements
+      if (mutation.type === 'attributes') {
+        const target = mutation.target as Element;
+        const dataTid = target.getAttribute?.('data-tid') || '';
+        return dataTid.includes('call') || 
+               dataTid.includes('meeting') ||
+               dataTid.includes('prejoin');
+      }
+      return false;
+    });
+    
+    if (hasRelevantChanges) {
+      debouncedCheck();
+    }
+  });
+  
+  // Observe document with filtered scope
+  mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['data-tid', 'data-call-state', 'aria-label'],
+  });
+  
+  // Register cleanup
+  observerInstance.registerCleanup(() => {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+    if (mutationObserver) {
+      mutationObserver.disconnect();
+      mutationObserver = null;
+    }
+    cancelDebounce();
+    if (stateMachine) {
+      stateMachine.reset();
+      stateMachine = null;
+    }
+    notifiedCallStarted = false;
+    notifiedCallEnded = false;
+  });
+}
+
+/**
+ * Legacy function kept for backward compatibility with tests
+ * Returns true if call appears active based on multi-signal evaluation
+ * 
+ * NOTE: This is a simplified check for test compatibility.
+ * Real detection uses the state machine via detectMSTeams()
+ */
+export function isMSTeamsActive(): boolean {
+  const signals = collectSignals();
+  
+  // If prejoin is visible, definitely not in call
+  if (signals.hasPrejoin) {
+    return false;
+  }
+  
+  // G1 FIX: hangup button presence is now a POSITIVE signal for active call
+  // (Previously incorrectly treated as "call ended")
+  // 
+  // Multi-signal check: call container is primary indicator
+  // If present (and visible), likely in a call
+  if (signals.hasCallContainer && signals.callContainerVisible) {
+    return true;
+  }
+  
+  // Fallback: if we have active indicators but no container yet,
+  // could be very early in call setup
+  const hasActiveSignal = signals.hasCallActive || 
+                          signals.hasCallControls || 
+                          signals.hasHangupVisible ||
+                          signals.videoCount > 0 ||
+                          signals.audioCount > 0;
+  
+  return hasActiveSignal;
+}
+
+/**
+ * Extract meeting title from current DOM state
  */
 export function extractMeetingTitle(): string | undefined {
-  // Try to get title from specific element
-  const titleElement = document.querySelector(TEAMS_SELECTORS.meetingTitle);
-  const text = titleElement?.textContent?.trim();
-  if (text) {
-    return text;
+  const signals = collectSignals();
+  if (signals.meetingTitle) {
+    return signals.meetingTitle;
   }
-
   // Fallback to document title
   return document.title || undefined;
 }
 
 /**
- * Extract participant count from MS Teams.
- * 
- * REASONING:
- * Participant count helps with meeting metadata
- * - Count participant avatars in the roster panel
+ * Extract participant count from current DOM state
  */
 export function extractParticipantCount(): number {
-  const participants = document.querySelectorAll(TEAMS_SELECTORS.participantsPanel);
+  const selectors = CURRENT_SELECTOR_SET.selectors;
+  const participants = queryAll(selectors.participants);
   return participants.length;
 }
 
-/**
- * Set up MS Teams detection.
- * 
- * REASONING:
- * - Uses polling with intervals for reliability
- * - MutationObserver for immediate detection
- * - Cleanup on page unload
- */
-export function detectMSTeams(observer: CallStateObserver): void {
-  // Track if we were already in a call
-  let wasInCall = false;
-  let callCheckInterval: ReturnType<typeof setInterval> | null = null;
+// ============================================================================
+// Back-reference for legacy compatibility
+// ============================================================================
 
-  /**
-   * Check for call state changes.
-   * 
-   * REASONING:
-   * Polling provides backup to MutationObserver
-   * Some DOM changes may not trigger mutations
-   */
-  function checkForCall(): void {
-    const isInCall = isMSTeamsActive();
-
-    if (isInCall && !wasInCall) {
-      // Call started
-      wasInCall = true;
-      observer.notifyCallDetected();
-      observer.notifyCallStarted(extractMeetingTitle());
-    } else if (!isInCall && wasInCall) {
-      // Call ended
-      wasInCall = false;
-      observer.notifyCallEnded();
-    }
-  }
-
-  // Initial check
-  checkForCall();
-
-  // Set up polling interval (backup for MutationObserver)
-  callCheckInterval = setInterval(checkForCall, 1000);
-
-  // Set up MutationObserver for immediate detection
-  const mutationObserver = new MutationObserver((mutations) => {
-    // Check for relevant changes
-    for (const mutation of mutations) {
-      if (
-        mutation.type === 'childList' ||
-        mutation.type === 'attributes' ||
-        mutation.type === 'characterData'
-      ) {
-        checkForCall();
-        break;
-      }
-    }
-  });
-
-  // Observe the entire document for changes
-  mutationObserver.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['data-tid', 'data-call-state'],
-  });
-
-  // Register cleanup
-  observer.registerCleanup(() => {
-    if (callCheckInterval) {
-      clearInterval(callCheckInterval);
-    }
-    mutationObserver.disconnect();
-  });
-}
+/** Observer instance (set during detectMSTeams) */
+let observer: CallStateObserver | null = null;

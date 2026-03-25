@@ -102,7 +102,9 @@ To verify the installation:
    - **macOS**: `launchctl list | grep com.verbalizer.daemon`
    - **Linux**: `systemctl --user status verbalizerd`
 
-2. Join a Google Meet call. You should see a console log in the Extension's background service worker indicating that a call has been detected and recording has started.
+2. Join a Google Meet call or Microsoft Teams call. You should see a console log in the Extension's background service worker indicating that a call has been detected and recording has started.
+
+3. For Teams Web specifically, open DevTools (`F12`) on a Teams call page and look for `[TeamsDetector v2]` logs.
 
 ## Troubleshooting
 

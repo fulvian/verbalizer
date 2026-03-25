@@ -46,10 +46,16 @@ export class CallStateObserver {
   
   /**
    * Notify background that user joined a call.
+   * G5 Fix: Reuses existing callId from notifyCallDetected() if available,
+   * ensuring consistent callId throughout the session.
    */
   notifyCallStarted(title?: string): void {
     this.callStartTime = Date.now();
-    this.currentCallId = this.generateCallId(this._platform);
+    
+    // G5 Fix: Only generate callId if we don't already have one from notifyCallDetected()
+    if (!this.currentCallId) {
+      this.currentCallId = this.generateCallId(this._platform);
+    }
     
     chrome.runtime.sendMessage({
       type: 'CALL_STARTED',
