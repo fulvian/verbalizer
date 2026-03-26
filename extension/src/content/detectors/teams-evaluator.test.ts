@@ -243,11 +243,11 @@ describe('Teams Evaluator v2', () => {
     it('should detect stable state after time passes', () => {
       const state = {
         candidate: 'in_call' as const,
-        since: Date.now() - 2500,
-        supportCount: 2,
+        since: Date.now() - 3500,
+        supportCount: 3,
       };
       
-      const stable = isStable(state, Date.now(), 2000);
+      const stable = isStable(state, Date.now(), 3000);
       
       expect(stable).toBe(true);
     });
@@ -256,10 +256,10 @@ describe('Teams Evaluator v2', () => {
       const state = {
         candidate: 'in_call' as const,
         since: Date.now(),
-        supportCount: 1,
+        supportCount: 3,
       };
       
-      const stable = isStable(state, Date.now(), 2000);
+      const stable = isStable(state, Date.now(), 3000);
       
       expect(stable).toBe(false);
     });

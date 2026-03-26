@@ -93,7 +93,10 @@ describe('Content Script', () => {
       
       initialize();
       
-      expect(consoleSpy).toHaveBeenCalledWith('[Verbalizer] Initialization failed:', expect.any(Error));
+      // Check structured log output - error contains "Initialization failed"
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Initialization failed')
+      );
       
       querySelectorSpy.mockRestore();
       consoleSpy.mockRestore();
@@ -110,7 +113,10 @@ describe('Content Script', () => {
       
       initialize();
       
-      expect(consoleSpy).toHaveBeenCalledWith('[Verbalizer] Not a supported platform');
+      // Check structured log output - warn contains "Not a supported platform"
+      expect(consoleSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Not a supported platform')
+      );
       consoleSpy.mockRestore();
     });
 
