@@ -9,7 +9,7 @@ Automatic audio recording, transcription, and documentation for Google Meet and 
 - **Local Transcription**: Uses whisper.cpp for privacy-first, local speech-to-text
 - **Markdown Output**: Generates clean, timestamped transcripts in Markdown format
 - **Cross-Platform**: Works on macOS and Linux
-- **Cloud Sync** (coming soon): Automatically backup transcripts to your Google Drive
+- **Microsoft Teams Linux**: Full support for Teams Web on Linux with PipeWire audio capture
 
 ## Requirements
 
@@ -82,6 +82,17 @@ Once installed, Verbalizer runs automatically in the background:
 2. Verbalizer automatically detects the call and starts recording
 3. When you leave the call, recording stops and transcription begins
 4. Find your transcript in `~/verbalizer/transcripts/`
+
+### Microsoft Teams on Linux
+
+Verbalizer v2 now supports Microsoft Teams Web on Linux with full end-to-end functionality:
+
+1. **Call Detection**: Multi-signal scoring with state machine (START_THRESHOLD: 0.40, END_THRESHOLD: 0.15)
+2. **Audio Capture**: Automatic source discovery using PipeWire/PulseAudio (`pactl`)
+3. **Recording**: System audio capture from monitor sources
+4. **Transcription**: Local whisper.cpp processing with automatic language detection
+
+To test: join a Teams call and check the browser console for `[CONTENT][INFO] Call started detected` messages.
 
 ## Output Structure
 
