@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/fulvian/verbalizer/daemon/internal/audio"
 	"github.com/fulvian/verbalizer/daemon/internal/cloud/driveclient"
 	cloudmgr "github.com/fulvian/verbalizer/daemon/internal/cloud/manager"
 	"github.com/fulvian/verbalizer/daemon/internal/cloud/syncqueue"
@@ -33,6 +34,20 @@ func run() error {
 
 	if err := cfg.EnsureDirs(); err != nil {
 		return fmt.Errorf("failed to ensure directories: %w", err)
+	}
+
+	// Platform-specific preflight checks
+	switch cfg.Audio.Format {
+	case "linux":
+		// Run Linux audio preflight check
+		ok, msg, err := audio.PreflightCheck()
+		if err != nil {
+			fmt.Printf("WARNING: Audio preflight check failed: %v\n", err)
+		} else if !ok {
+			fmt.Printf("WARNING: Audio source issue: %s\n", msg)
+		} else {
+			fmt.Printf("Audio preflight: %s\n", msg)
+		}
 	}
 
 	// Initialize secrets store

@@ -7,6 +7,7 @@
  * - State machine with stabilization to prevent flapping
  * - Visibility checks on all elements (G3 fix)
  * - Debounced MutationObserver (Phase 2)
+ * - Structured logging with correlation IDs
  * 
  * Architecture:
  * 1. TeamsStateMachine evaluates signals and manages phase transitions
@@ -26,6 +27,7 @@ import {
   CURRENT_SELECTOR_SET,
   queryAll,
 } from './teams-selectors';
+import { contentLogger, generateCallId } from '../../utils/logger';
 
 // ============================================================================
 // Configuration
@@ -68,6 +70,9 @@ let lastNotificationMs = 0;
 /** Current poll interval (idle vs transition) */
 let currentPollMs = IDLE_POLL_MS;
 
+/** Current call session ID for correlation */
+let currentCallId: string | null = null;
+
 // ============================================================================
 // Core Detection Logic
 // ============================================================================
@@ -83,6 +88,27 @@ function evaluateState(): EvaluationResult {
   
   const signals = collectSignals();
   const result = stateMachine.evaluate(signals);
+  
+  // Structured logging for debugging
+  contentLogger.debug('Poll: signals detected', {
+    callId: currentCallId || undefined,
+    state: result.phase,
+    confidence: result.confidence,
+    reason: signals.hasCallContainer ? 'callContainer' : 
+             signals.hasCallActive ? 'callActive' :
+             signals.hasHangupVisible ? 'hangup' : 'none',
+    metadata: {
+      hasCallContainer: signals.hasCallContainer,
+      hasCallActive: signals.hasCallActive,
+      hasCallControls: signals.hasCallControls,
+      hasHangupVisible: signals.hasHangupVisible,
+      hasPrejoin: signals.hasPrejoin,
+      videoCount: signals.videoCount,
+      audioCount: signals.audioCount,
+      hasVideoGrid: signals.hasVideoGrid,
+      hasMediaStreamActive: signals.hasMediaStreamActive,
+    }
+  });
   
   // Update polling speed based on phase
   updatePollingSpeed(result.phase);
@@ -142,7 +168,17 @@ function processEvaluation(result: EvaluationResult): void {
     notifiedCallEnded = false;
     lastNotificationMs = now;
     
-    logDetection('CALL_START', result);
+    // Generate call ID for correlation
+    currentCallId = generateCallId();
+    
+    contentLogger.info('Call started detected', {
+      callId: currentCallId,
+      event: 'CALL_STARTED',
+      state: 'in_call',
+      confidence: result.confidence,
+      reason: result.reasons.join('; '),
+      metadata: { title: result.sample.meetingTitle }
+    });
     
     // Extract meeting title from signals
     const title = result.sample.meetingTitle;
@@ -152,18 +188,17 @@ function processEvaluation(result: EvaluationResult): void {
     notifiedCallStarted = false;
     lastNotificationMs = now;
     
-    logDetection('CALL_END', result);
+    contentLogger.info('Call ended detected', {
+      callId: currentCallId || undefined,
+      event: 'CALL_ENDED',
+      state: 'idle',
+      confidence: result.confidence,
+      reason: result.reasons.join('; '),
+    });
     
+    currentCallId = null;
     observer?.notifyCallEnded();
   }
-}
-
-/**
- * Structured logging for detector events
- */
-function logDetection(event: string, result: EvaluationResult): void {
-  const prefix = '[TeamsDetector v2]';
-  console.log(`${prefix} ${event}: phase=${result.phase} confidence=${(result.confidence * 100).toFixed(0)}% reasons=[${result.reasons.join(', ')}]`);
 }
 
 // ============================================================================

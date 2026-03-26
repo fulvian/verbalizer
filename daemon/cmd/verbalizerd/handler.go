@@ -37,11 +37,13 @@ func (h *DaemonHandler) HandleCommand(cmd *api.Command) (*api.Response, error) {
 		if err := h.sessionMgr.StartRecording(payload); err != nil {
 			return &api.Response{Success: false, Error: err.Error()}, nil
 		}
+		// Get the actual recording path from session manager
+		status := h.sessionMgr.GetStatus()
 		return &api.Response{
 			Success: true,
 			Data: api.RecordingStartedData{
 				CallID:        payload.CallID,
-				RecordingPath: fmt.Sprintf("/tmp/%s.mp3", payload.CallID), // Placeholder
+				RecordingPath: status.AudioPath, // Real path, not placeholder
 			},
 		}, nil
 

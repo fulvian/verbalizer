@@ -213,16 +213,19 @@ The Teams Web detector uses a multi-signal scoring approach with state machine:
 | `callContainer` | 0.25 | Primary call presence indicator |
 | `callActive` | 0.20 | Teams internal call state |
 | `hangupVisible` | 0.20 | Hangup button (G1 fix: = ACTIVE call) |
-| `callControls` | 0.15 | Call control toolbar |
-| `videoCount` | 0.10 | Active video elements |
-| `audioCount` | 0.10 | Active audio elements |
+| `callControls` | 0.20 | Call control toolbar (increased) |
+| `videoGrid` | 0.20 | Video grid container present |
+| `mediaStreamActive` | 0.20 | Any video/audio with src active |
+| `videoCount` | 0.15 | Active video elements |
+| `audioCount` | 0.15 | Active audio elements |
 | `prejoin` | -0.30 | Penalty when prejoin visible |
 
 **State Machine Phases:**
 - `idle` → `prejoin` → `in_call` → `ending` → `idle`
-- START_THRESHOLD: 0.7 (need 70% confidence to enter `in_call`)
-- END_THRESHOLD: 0.3 (need <30% confidence to enter `ending`)
-- STABLE_MS: 2000 (must maintain threshold for 2s before transition)
+- START_THRESHOLD: 0.40 (need 40% confidence to enter `in_call`) - tuned for stability
+- END_THRESHOLD: 0.15 (need <15% confidence to enter `ending`)
+- STABLE_MS: 3000 (must maintain threshold for 3s before transition)
+- MIN_SUPPORT: 3 (need 3 consecutive samples supporting the transition)
 
 ### Native Host
 
@@ -303,6 +306,44 @@ Speaker 3: We're on track for the March deadline...
 3. **No Network**: Daemon doesn't expose network ports (except for OAuth callback)
 4. **Local Processing**: All transcription happens locally, no cloud
 5. **Cloud Sync**: Optional Google Drive backup with OAuth 2.0 + PKCE
+
+---
+
+## Structured Logging
+
+Verbalizer uses structured logging with correlation IDs for end-to-end observability:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    STRUCTURED LOGGING FORMAT                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   LogEntry {                                                               │
+│     ts: string,        // ISO 8601 timestamp                               │
+│     level: 'debug'|'info'|'warn'|'error',                                  │
+│     layer: 'content'|'background'|'native'|'daemon',                      │
+│     platform: string,   // 'teams' | 'meet'                               │
+│     callId: string,     // Correlation ID for the call session             │
+│     event: string,      // 'CALL_STARTED' | 'CALL_ENDED'                   │
+│     state: string,      // Current phase: 'idle'|'prejoin'|'in_call'|...  │
+│     confidence: number, // 0-1 confidence score                            │
+│     reason: string,    // Human-readable reason                            │
+│     errorCode: string, // Machine-readable error code                      │
+│     metadata: object   // Additional context                               │
+│   }                                                                        │
+│                                                                             │
+│   Example output:                                                          │
+│   [2026-03-26T10:30:00.000Z][CONTENT][INFO] Call started detected         │
+│   callId=call_1234567890_abc123 event=CALL_STARTED state=in_call          │
+│   conf=85% reason=callContainer;callActive                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Correlation ID Flow:**
+1. When CALL_STARTED is detected, a unique `callId` is generated: `call_{timestamp}_{random}`
+2. This ID is used throughout the pipeline: content → background → native → daemon
+3. All logs for the same call share the same `callId` for easy correlation
 
 ---
 
@@ -404,3 +445,39 @@ Cloud sync is implemented as an optional feature that backs up transcripts to th
 - Requires PipeWire (standard on modern distros)
 - Install via systemd user service
 - Works with PulseAudio compatibility layer
+- Audio capture uses source discovery (pactl/wpctl) to find monitor sources
+
+### Linux Audio Source Discovery
+
+The Linux audio capture system automatically discovers available audio sources to ensure reliable call recording:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    LINUX AUDIO SOURCE DISCOVERY                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐      │
+│   │  Source         │───▶│  Find Monitor   │───▶│  Validate       │      │
+│   │  Discovery      │    │  Source         │    │  Source         │      │
+│   │  (pactl/wpctl) │    │  (system audio) │    │  (available)    │      │
+│   └─────────────────┘    └─────────────────┘    └─────────────────┘      │
+│            │                       │                       │                │
+│            ▼                       ▼                       ▼                │
+│   Returns list of           Returns preferred          Returns bool        │
+│   AudioSource[]             monitor source            for ffmpeg          │
+│                                                                             │
+│   Source types:                                                            │
+│   • monitor sources: Capture system audio (target for call recording)     │
+│   • input sources: Capture microphone input                                 │
+│   • default source: System default (fallback)                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**Preflight Check:**
+The daemon runs a preflight check at startup to validate:
+- ffmpeg is available
+- Audio sources are available
+- Selected source is valid
+
+This prevents "silent success" scenarios where recording starts but produces empty files.

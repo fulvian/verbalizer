@@ -73,10 +73,15 @@ func NewManager(cfg *config.Config) (*Manager, error) {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	// Initialize transcriber with default paths
-	// In a real scenario, these would be configurable.
-	binaryPath := "whisper/whisper.cpp/main"
-	modelPath := "whisper/models/ggml-small.bin"
+	// Use config-driven paths for whisper binary and model
+	// These should be absolute paths in production
+	binaryPath := cfg.Transcription.Model
+	modelPath := filepath.Join(cfg.DataDir, "models", "ggml-"+cfg.Transcription.Model+".bin")
+
+	// Override with absolute path if not already absolute
+	if !filepath.IsAbs(binaryPath) {
+		binaryPath = filepath.Join(cfg.DataDir, binaryPath)
+	}
 
 	return &Manager{
 		capture:     capturer,

@@ -7,12 +7,16 @@
 import { detectGoogleMeet } from './detectors/meet';
 import { detectMSTeams } from './detectors/teams';
 import { CallStateObserver } from './observer';
+import { contentLogger } from '../utils/logger';
 
 // Platform detection
 type Platform = 'google-meet' | 'ms-teams' | null;
 
 export let currentPlatform: Platform = null;
 export let observer: CallStateObserver | null = null;
+
+// Current call session ID for correlation
+export let currentCallId: string | null = null;
 
 /**
  * Detect which platform we're on based on URL.
@@ -37,23 +41,28 @@ export function detectPlatform(): Platform {
 export function initialize(): void {
   try {
     currentPlatform = detectPlatform();
+    contentLogger.info('Platform detected', { reason: currentPlatform || 'unknown' });
+    contentLogger.debug('Current URL', { reason: window.location.href });
     
     if (!currentPlatform) {
-      console.warn('[Verbalizer] Not a supported platform');
+      contentLogger.warn('Not a supported platform');
       return;
     }
     
     // Create observer for call state changes
     observer = new CallStateObserver(currentPlatform);
+    contentLogger.info('Observer created', { reason: currentPlatform });
     
     // Set up platform-specific detection
     if (currentPlatform === 'google-meet') {
       detectGoogleMeet(observer);
     } else if (currentPlatform === 'ms-teams') {
       detectMSTeams(observer);
+      contentLogger.info('Teams detector initialized');
     }
   } catch (error) {
-    console.error('[Verbalizer] Initialization failed:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    contentLogger.error('Initialization failed', { errorCode: 'INIT_ERROR', metadata: { error: errorMsg } });
   }
 }
 
@@ -71,6 +80,7 @@ export function cleanup(): void {
  * Main entry point setup.
  */
 export function setup(): void {
+  console.log('[Verbalizer] Content script starting...');
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initialize);
   } else {

@@ -108,13 +108,24 @@ To verify the installation:
 
 ## Troubleshooting
 
-- **Audio not captured on Linux**: Ensure PipeWire is running and FFmpeg is installed. Check that `ffmpeg -f pulse -i default` works.
+- **Audio not captured on Linux**: 
+  - Ensure PipeWire/PulseAudio is running: `pactl info` or `wpctl status`
+  - Verify FFmpeg is installed: `ffmpeg -version`
+  - Check audio sources available: `pactl list sources short`
+  - The daemon now automatically discovers monitor sources. Look for log message: "Audio preflight: using source: <name>"
 - **Audio not captured on macOS**: Ensure Chrome and the `verbalizerd` binary have "Screen Recording" permissions in System Settings > Privacy & Security.
 - **Native Host Error**: Check that the path in the `.json` manifest correctly points to the `verbalizer-host` binary.
 - **Transcription issues**: 
   1. Ensure the whisper model has been downloaded correctly using `./scripts/download-model.sh`.
   2. Create the whisper-cli symlink: `ln -sf build/bin/whisper-cli whisper/whisper.cpp/main`
   3. Ensure the daemon binary was built for the correct OS (Linux x86-64 vs macOS ARM64).
+- **Teams detection not working**:
+  - Open DevTools on Teams page and look for structured logs: `[CONTENT][INFO]`
+  - Check that correlation IDs are being generated: `call_<timestamp>_<random>`
+  - Verify START_THRESHOLD (0.40) is met by checking confidence in logs
+- **Recording produces empty file**:
+  - Check daemon logs for "source discovery failed" or "no monitor sources found"
+  - Ensure you're capturing system audio, not microphone
 
 ## Google Drive Sync (Optional)
 
