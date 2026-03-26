@@ -79,15 +79,33 @@ cp "$CHROME_NM_DIR/com.verbalizer.host.json" "$HOME/.config/microsoft-edge/Nativ
 echo "Installing systemd service..."
 cat > "$SERVICE_DIR/verbalizer.service" << EOF
 [Unit]
-Description=Verbalizer Daemon
-After=pipewire.service
-Requires=pipewire.service
+Description=Verbalizer Daemon - Auto record and transcribe Meet/Teams calls
+After=pipewire.service pulseaudio.service
+Wants=pipewire.service
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/verbalizerd
+ExecStart=%h/.local/share/verbalizer/verbalizerd
+WorkingDirectory=%h/.local/share/verbalizer
+
+# Restart on crash, failure, or unexpected exit
 Restart=on-failure
 RestartSec=5
+
+# Restart limit: try up to 3 times in 5 minutes, then give up and try again after 5 min
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
+# Resource limits (optional, helps stability)
+LimitNOFILE=4096
+
+# Environment
+Environment=HOME=%h
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=verbalizerd
 
 [Install]
 WantedBy=default.target
@@ -155,7 +173,7 @@ echo "2. Update the extension ID in: $CHROME_NM_DIR/com.verbalizer.host.json"
 echo "3. Restart Chrome"
 echo ""
 echo "Service commands:"
-echo "  Status:  systemctl --user status verbalizer"
-echo "  Stop:    systemctl --user stop verbalizer"
-echo "  Restart: systemctl --user restart verbalizer"
+echo "  Status:  systemctl --user status verbalizer.service"
+echo "  Stop:    systemctl --user stop verbalizer.service"
+echo "  Restart: systemctl --user restart verbalizer.service"
 echo "  Logs:    journalctl --user -u verbalizer -f"
