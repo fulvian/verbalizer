@@ -209,7 +209,12 @@ func getSourceDescription(sourceName string) string {
 func (sd *SourceDiscovery) FindMonitorSource() (string, error) {
 	sources, err := sd.DiscoverSources()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("DiscoverSources failed: %w", err)
+	}
+
+	fmt.Printf("[DEBUG] FindMonitorSource: discovered %d sources\n", len(sources))
+	for i, s := range sources {
+		fmt.Printf("[DEBUG]   Source[%d]: ID=%s, Name=%s, IsMonitor=%v, Desc=%s\n", i, s.ID, s.Name, s.IsMonitor, s.Description)
 	}
 
 	// Look for monitor sources
@@ -220,8 +225,10 @@ func (sd *SourceDiscovery) FindMonitorSource() (string, error) {
 		}
 	}
 
+	fmt.Printf("[DEBUG] FindMonitorSource: found %d monitor sources\n", len(monitors))
+
 	if len(monitors) == 0 {
-		return "", fmt.Errorf("no monitor sources found")
+		return "", fmt.Errorf("no monitor sources found (checked %d total sources)", len(sources))
 	}
 
 	// Prefer default monitor (usually has .monitor suffix and is default)
@@ -231,10 +238,12 @@ func (sd *SourceDiscovery) FindMonitorSource() (string, error) {
 			continue
 		}
 		// Return the name for ffmpeg
+		fmt.Printf("[DEBUG] FindMonitorSource: selected monitor=%s\n", m.Name)
 		return m.Name, nil
 	}
 
 	// Fallback to first monitor
+	fmt.Printf("[DEBUG] FindMonitorSource: falling back to first monitor=%s\n", monitors[0].Name)
 	return monitors[0].Name, nil
 }
 

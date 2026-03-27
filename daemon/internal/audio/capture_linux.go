@@ -105,25 +105,33 @@ func (c *LinuxCapture) discoverAndSelectSource() (string, error) {
 
 	// First, try to find a monitor source (system audio)
 	monitorSource, err := sd.FindMonitorSource()
+	fmt.Printf("[DEBUG] discoverAndSelectSource: FindMonitorSource returned: source=%q, err=%v\n", monitorSource, err)
 	if err == nil && monitorSource != "" {
 		// Validate the source exists
 		valid, valErr := sd.ValidateSource(monitorSource)
+		fmt.Printf("[DEBUG] discoverAndSelectSource: ValidateSource(%q) returned: valid=%v, err=%v\n", monitorSource, valid, valErr)
 		if valErr == nil && valid {
 			return monitorSource, nil
 		}
+	} else {
+		fmt.Printf("[DEBUG] discoverAndSelectSource: FindMonitorSource failed: %v\n", err)
 	}
 
 	// Fallback: try to get default source
 	defaultSource, err := sd.GetDefaultSource()
+	fmt.Printf("[DEBUG] discoverAndSelectSource: GetDefaultSource returned: source=%q, err=%v\n", defaultSource, err)
 	if err == nil && defaultSource != "" {
 		valid, valErr := sd.ValidateSource(defaultSource)
+		fmt.Printf("[DEBUG] discoverAndSelectSource: ValidateSource(%q) returned: valid=%v, err=%v\n", defaultSource, valid, valErr)
 		if valErr == nil && valid {
+			fmt.Printf("[DEBUG] discoverAndSelectSource: falling back to defaultSource=%q\n", defaultSource)
 			return defaultSource, nil
 		}
 	}
 
 	// Last resort: use "default" as the source name
 	// ffmpeg will use the system's default source
+	fmt.Printf("[DEBUG] discoverAndSelectSource: all fallbacks failed, using 'default'\n")
 	return "default", nil
 }
 
